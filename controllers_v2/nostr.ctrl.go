@@ -34,6 +34,11 @@ type CreateUserEventResponseBody struct {
 	Pubkey string `json:"pubkey"`
 }
 
+type GetTahubPublicKey struct {
+	TaHubPublicKey   string `json:"tahubpublickey"`
+	Pubkey string `json:"pubkey"`
+}
+
 func (controller *NostrController) AddNostrEvent(c echo.Context) error {
 	
 	var body service.EventRequestBody
@@ -47,24 +52,33 @@ func (controller *NostrController) AddNostrEvent(c echo.Context) error {
 		c.Logger().Errorf("Invalid AddNostrEvent request body: %v", err)
 		return c.JSON(http.StatusBadRequest, responses.BadArgumentsError)
 	}
-	// handle create user event - can assume valid thanks to middleware
-	if body.Content == "TAHUB_CREATE_USER" {
+	switch body.Content {
+		
+	case "TAHUB_CREATE_USER":
 		user, err := controller.svc.CreateUser(c.Request().Context(), body.Pubkey)
 		if err != nil {
 			// create user error response
 			c.Logger().Errorf("Failed to create user via Nostr event: %v", err)
 			return c.JSON(http.StatusInternalServerError, responses.GeneralServerError)
 		}
+	
 		// create user success response
 		var ResponseBody CreateUserEventResponseBody
 		ResponseBody.ID = user.ID
 		ResponseBody.Pubkey = user.Pubkey
-
 		return c.JSON(http.StatusOK, &ResponseBody)
-	} else {
+	
+	case "GET_SERVER_PUBKEY":
+		var ResponseBody GetTahubPublicKey
+		ResponseBody.Pubkey = body.Pubkey
+		ResponseBody.TaHubPublicKey = controller.svc.Config.TaHubPublicKey
+		return c.JSON(http.StatusOK, &ResponseBody)
+	
+	default:
 		// TODO handle next events
 		return c.JSON(http.StatusBadRequest, responses.UnimplementedError)
 	}
+
 }
 
 
