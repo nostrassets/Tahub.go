@@ -2,7 +2,7 @@ package v2controllers
 
 import (
 	"net/http"
-
+	"github.com/nbd-wtf/go-nostr"
 	"github.com/getAlby/lndhub.go/lib/responses"
 	"github.com/getAlby/lndhub.go/lib/service"
 	"github.com/labstack/echo/v4"
@@ -17,16 +17,6 @@ func NewNostrController(svc *service.LndhubService) *NostrController {
 	return &NostrController{svc: svc}
 }
 
-// type EventRequestBody struct {
-// 	ID        string            `json:"id"`
-// 	Pubkey    string            `json:"pubkey"`
-// 	CreatedAt int64             `json:"created_at"`
-// 	Kind      int               `json:"kind"`
-// 	Tags      [][]interface{}   `json:"tags"`
-// 	Content   string            `json:"Content"`
-// 	Sig       string            `json:"Sig"`
-// }
-
 type CreateUserEventResponseBody struct {
 	// internal tahub user id
 	ID     int64 `json:"id"`
@@ -38,6 +28,7 @@ type GetTahubPublicKey struct {
 	TaHubPublicKey   string `json:"tahubpublickey"`
 	Pubkey string `json:"pubkey"`
 }
+
 
 func (controller *NostrController) AddNostrEvent(c echo.Context) error {
 	
@@ -81,29 +72,3 @@ func (controller *NostrController) AddNostrEvent(c echo.Context) error {
 
 }
 
-
-// TODO - record events in the database, requires a model
-// type Event struct  {
-// 	ID        string    `json:"ID"`
-// 	Pubkey    string    `json:"Pubkey"`
-// 	Kind      int       `json:"kind"`
-// 	Ta        string    `json:"Ta"`
-// 	Amt       float64   `json:"Amt"`
-// 	Addr      string    `json:"addr"`
-// 	Fee       float64   `json:"fee"`
-// 	Content   string    `json:"Content"`
-// 	Sig       string    `json:"Sig"`
-// }
-
-
-// NostrEventBody godoc
-// @Summary      Validate NostEvent Payload
-// @Description  Returns a new AddNoStrResponseBody
-// @Accept       json
-// @Produce      json
-// @Tags         NoStrEvent
-// @Body      AddNoStrResponseBody  True  "Add NoStr Event"
-// @Success      200      {object}  AddNoStrResponseBody
-// @Failure      400      {object}  responses.ErrorResponse
-// @Failure      500      {object}  responses.ErrorResponse
-// @Router       /v2/event [post]
