@@ -29,15 +29,14 @@ type LndhubService struct {
 	InvoicePubSub  *Pubsub
 }
 
-// type EventRequestBody struct {
-// 	ID        string            `json:"id"`
-// 	Pubkey    string            `json:"pubkey"`
-// 	CreatedAt int64             `json:"created_at"`
-// 	Kind      int64               `json:"kind"`
-// 	Tags      [][]interface{}   `json:"tags"`
-// 	Content   string            `json:"content"`
-// 	Sig       string            `json:"sig"`
-// }
+type EventRequestBody struct {
+	ID        string            `json:"id"`
+	Pubkey    string            `json:"pubkey"`
+	CreatedAt int64             `json:"created_at"`
+	Kind      int64               `json:"kind"`
+	Content   string            `json:"content"`
+	Sig       string            `json:"sig"`
+}
 
 func (svc *LndhubService) GenerateToken(ctx context.Context, login, password, inRefreshToken string) (accessToken, refreshToken string, err error) {
 	var user models.User
@@ -247,6 +246,127 @@ func (svc *LndhubService) VerfiySchnorrSig(event nostr.Event) {
 // 		}
 // 	}
 // }
+
+func (svc *LndhubService) ValidateNostrEventPayload() echo.MiddlewareFunc {
+  return func(next echo.HandlerFunc) echo.HandlerFunc {
+    return func(c echo.Context) error {
+      var payload EventRequestBody
+
+      // Perform validation specific to the Event `content`
+      if err := c.Bind(&payload); err != nil {
+        c.Logger().Errorf("Failed to load AddNostrEvent request body: %v", err)
+        return c.JSON(http.StatusBadRequest, responses.BadArgumentsError)
+      }
+
+      // TODO: validate signature for pubkey
+      c.Logger().Debugf("payload content: %v", payload.Content)
+
+      // Validate based on event content
+      parts := strings.Split(payload.Content, ":")
+
+      switch parts[0] {
+
+      case "TAHUB_CREATE_USER":
+
+        // Validate specific fields for TAHUB_CREATE_USER event
+        if payload.Kind != 1 {
+          return echo.NewHTTPError(http.StatusBadRequest, echo.Map{
+            "error":   true,
+            "code":    2,
+            "message": "Field 'kind' must be 1",
+          })
+        }
+        // Store the validated payload in the context
+        c.Set("validatedPayload", payload)
+        return next(c)
+        
+      case "TAHUB_RECEIVE_ADDRESS_FOR_ASSET":
+
+        // Validate specific fields for TAHUB_RECEIVE_ADDRESS_FOR_ASSET event
+        if payload.Kind != 1 {
+          return echo.NewHTTPError(http.StatusBadRequest, echo.Map{
+            "error":   true,
+            "code":    2,
+            "message": "Field 'kind' must be 1",
+          })
+        }
+
+        if parts[1] == "" {
+          return echo.NewHTTPError(http.StatusBadRequest, echo.Map{
+            "error":   true,
+            "code":    2,
+            "message": "Field 'Asset_id' must be added in the content field of the payload",
+          })
+        }
+
+        if parts[2] == "" {
+          return echo.NewHTTPError(http.StatusBadRequest, echo.Map{
+            "error":   true,
+            "code":    2,
+            "message": "Field 'Amt' must be added in the content field of the payload",
+          })
+        }
+        // Store the validated payload in the context
+        c.Set("validatedPayload", payload)
+        return next(c)
+
+      case "TAHUB_SEND_ASSET":
+        // Validate specific fields for TAHUB_SEND_ASSET event
+        if payload.Kind != 1 {
+          return echo.NewHTTPError(http.StatusBadRequest, echo.Map{
+            "error":   true,
+            "code":    2,
+            "message": "Field 'kind' must be 1",
+          })
+        }
+
+        if parts[1] == "" {
+          return echo.NewHTTPError(http.StatusBadRequest, echo.Map{
+            "error":   true,
+            "code":    2,
+            "message": "Field 'Addr' must be added in the content field of the payload",
+          })
+        }
+
+        if parts[2] == "" {
+          return echo.NewHTTPError(http.StatusBadRequest, echo.Map{
+            "error":   true,
+            "code":    2,
+            "message": "Field 'Fee' must be added in the content field of the payload",
+          })
+        }
+        // Store the validated payload in the context
+        c.Set("validatedPayload", payload)
+        return next(c)
+    
+      case "TAHUB_GET_BALANCES":
+        
+        // Validate specific fields for TAHUB_GET_BALANCES event
+        if payload.Kind != 1 {
+          return echo.NewHTTPError(http.StatusBadRequest, echo.Map{
+            "error":   true,
+            "code":    2,
+            "message": "Field 'kind' must be 1",
+          })
+        }
+
+        // Store the validated payload in the context
+        c.Set("validatedPayload", payload)
+        return next(c)  
+
+      default:
+        return echo.NewHTTPError(http.StatusBadRequest, echo.Map{
+          "error":   true,
+          "code":    2,
+          "message": "Invalid event content",
+        })
+      }
+
+    }
+  }
+}
+
+
 func (svc *LndhubService) ValidateUserMiddleware() echo.MiddlewareFunc {
 	// TODO update ValidateUserMiddlware 
 	// * it has already performed a check on the pubkey for the event passed to endpoint
