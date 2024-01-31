@@ -244,7 +244,6 @@ func (svc *LndhubService) ParseInt(value interface{}) (int64, error) {
 // 		}
 // 	}
 // }
-
 func (svc *LndhubService) ValidateUserMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
