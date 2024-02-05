@@ -15,7 +15,7 @@ import (
 	// "github.com/getAlby/lndhub.go/lib/tokens"
 	"github.com/getAlby/lndhub.go/rabbitmq"
 	"github.com/getAlby/lndhub.go/tapd"
-	"github.com/nbd-wtf/go-nostr"
+	// "github.com/nbd-wtf/go-nostr"
 	"github.com/getAlby/lndhub.go/lnd"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/random"
@@ -93,7 +93,8 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, error) {
 		}
 		// validate amt
 		amt, err := strconv.ParseFloat(data[2], 64)
-		if err != nil || amt > 0 {
+	
+		if err != nil || amt <= 0 {
 			return false, errors.New("Field 'amt' must be a valid number and non-zero")
 		}
 
