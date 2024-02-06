@@ -22,6 +22,7 @@ import (
 	"github.com/getAlby/lndhub.go/tapd"
 
 	"github.com/getAlby/lndhub.go/lnd"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/random"
 	"github.com/nbd-wtf/go-nostr"
