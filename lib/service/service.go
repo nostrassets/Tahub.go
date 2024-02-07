@@ -20,6 +20,8 @@ import (
 	"github.com/getAlby/lndhub.go/lnd"
 	"github.com/getAlby/lndhub.go/rabbitmq"
 	"github.com/getAlby/lndhub.go/tapd"
+
+	"github.com/getAlby/lndhub.go/lnd"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/random"
 	"github.com/nbd-wtf/go-nostr"
@@ -103,9 +105,10 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 			return false, payload, errors.New("Field 'Asset ID' must have a value")
 		}
 		// validate amt
-		amt, err := strconv.ParseUint(data[2], 10, 64)
-		if err != nil || amt == 0 {
-			return false, payload, errors.New("Field 'amt' must be a valid number and non-zero")
+		amt, err := strconv.ParseFloat(data[2], 64)
+	
+		if err != nil || amt <= 0 {
+			return false, errors.New("Field 'amt' must be a valid number and non-zero")
 		}
 
 		return true, payload, nil
