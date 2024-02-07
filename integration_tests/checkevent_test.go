@@ -20,7 +20,7 @@ func (suite *LndhubServiceTestSuite) TestCheckEvent() {
 	svc := suite.service
 
 	payload1 := nostr.Event{
-		Kind:    1,
+		Kind:    4,
 		Content: "TAHUB_CREATE_USER",
 	}
 	result, err := svc.CheckEvent(payload1)
@@ -29,7 +29,7 @@ func (suite *LndhubServiceTestSuite) TestCheckEvent() {
 
 	// Test case 2: TAHUB_RECEIVE_ADDRESS_FOR_ASSET
 	payload2 := nostr.Event{
-		Kind:    1,
+		Kind:    4,
 		Content: "TAHUB_RECEIVE_ADDRESS_FOR_ASSET:34ttthgfhg:45",
 	}
 	result, err = svc.CheckEvent(payload2)
@@ -39,7 +39,7 @@ func (suite *LndhubServiceTestSuite) TestCheckEvent() {
 
 	// Test case 3: Invalid content for TAHUB_RECEIVE_ADDRESS_FOR_ASSET
 	payload3 := nostr.Event{
-		Kind:    1,
+		Kind:    4,
 		Content: "TAHUB_RECEIVE_ADDRESS_FOR_ASSET",
 	}
 	result, err = svc.CheckEvent(payload3)
@@ -48,7 +48,7 @@ func (suite *LndhubServiceTestSuite) TestCheckEvent() {
 	assert.EqualError(suite.T(), err, "Invalid 'Content' for TAHUB_RECEIVE_ADDRESS_FOR_ASSET.")
 
 	payload4 := nostr.Event{
-		Kind:    1,
+		Kind:    4,
 		Content: "DEMO_RECEIVE_ADDRESS_FOR_ASSET",
 	}
 	result, err = svc.CheckEvent(payload4)
