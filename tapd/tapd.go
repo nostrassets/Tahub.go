@@ -126,3 +126,7 @@ func (wrapper *TAPDWrapper) GetUniverseAssets(ctx context.Context, req *universe
 func (wrapper *TAPDWrapper) NewAddress(ctx context.Context, req *taprpc.NewAddrRequest, options ...grpc.CallOption) (*taprpc.Addr, error) {
 	return wrapper.client.NewAddr(ctx, req, options...)
 }
+
+func (wrapper *TAPDWrapper) SubscribeReceiveAssetEvent(ctx context.Context, req *taprpc.SubscribeReceiveAssetEventNtfnsRequest, options ...grpc.CallOption) (SubscribeReceiveAssetEventWrapper, error) {
+	return wrapper.client.SubscribeReceiveAssetEventNtfns(ctx, req, options...)
+}

@@ -10,6 +10,7 @@ type User struct {
 	Pubkey       string         `bun:",unique,notnull"`
 	Accounts     []*Account `bun:"rel:has-many,join:id=user_id"`
 	Invoices     []*Invoice `bun:"rel:has-many,join:id=user_id"`
+	Addresses    []*Address `bun:"rel:has-many,join:id=user_id"`
 	Deactivated  bool
 	Deleted      bool
 	CreatedAt    time.Time      `bun:",nullzero,notnull,default:current_timestamp"`

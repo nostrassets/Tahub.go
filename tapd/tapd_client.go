@@ -20,6 +20,11 @@ type TapdClientWrapper interface {
 	//ListBalancesByAssetID(ctx context.Context, req *taprpc.ListBalancesRequest_AssetId, options ...grpc.CallOption) (*taprpc.ListBalancesResponse, error)
 	NewAddress(ctx context.Context, req *taprpc.NewAddrRequest, options ...grpc.CallOption) (*taprpc.Addr, error)
 	GetUniverseAssets(ctx context.Context, req *universerpc.AssetRootRequest, options ...grpc.CallOption) (*universerpc.AssetRootResponse, error)
+	SubscribeReceiveAssetEvent(ctx context.Context, req *taprpc.SubscribeReceiveAssetEventNtfnsRequest, options ...grpc.CallOption) (SubscribeReceiveAssetEventWrapper, error)
+}
+
+type SubscribeReceiveAssetEventWrapper interface {
+	Recv() (*taprpc.ReceiveAssetEvent, error)
 }
 
 func InitTAPDClient(c *TapdConfig, logger *lecho.Logger, ctx context.Context) (TapdClientWrapper, error) {
