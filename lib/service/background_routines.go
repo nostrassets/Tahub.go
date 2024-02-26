@@ -63,6 +63,17 @@ func (svc *LndhubService) StartRelayRoutine(ctx context.Context, uri string, las
 	return nil
 }
 
+func (svc *LndhubService) StartReceiveSubscription(ctx context.Context, url string) (err error) {
+	// TODO what is the proper way to not have a timeout on the context?
+	if svc.RabbitMQClient != nil {
+		// TODO populate
+		return nil
+	} else {
+		// TODO populate
+		return nil
+	}
+}
+
 func (svc *LndhubService) StartInvoiceRoutine(ctx context.Context) (err error) {
 	if svc.RabbitMQClient != nil {
 		err = svc.RabbitMQClient.SubscribeToLndInvoices(ctx, svc.ProcessInvoiceUpdate)
