@@ -85,14 +85,25 @@ func (svc *LndhubService) GetAddressByAssetId(ctx context.Context, assetId strin
 }
 
 func (svc *LndhubService) FetchOrCreateAssetAddr(ctx context.Context, userId uint64, assetId string, amt uint64) (string, error) {
+	// this is aware of amount so we can return early if an existing address is found
 	addr, err := svc.FindAddress(ctx, userId, assetId, amt)
-	// check db error
-	if err != nil {
+	// check db error - the nil check on addr indicates the error was on not found
+	if err != nil && addr != nil {
 		return "error: failed to check on existing address.", err
 	}
-	// return if existing address found
-	if addr.ID > 0 {
-		return addr.Address, nil
+	if addr != nil {
+		// // decode db address
+		// addrString, err := decodeDbAddressToString(addr.Addr)
+		// // check decode error
+		// if err != nil {
+		// 	return "error: failed to decode existing address.", err
+		// }
+
+		// // return existing address early
+		// return fmt.Sprintf("address: %s", addrString), nil
+		
+		// return existing address early
+		return fmt.Sprintf("address: %s", addr.Addr), nil
 	}
 	// decode assetId for tapd request
 	decoded, err := b64.StdEncoding.DecodeString(assetId)
@@ -111,7 +122,7 @@ func (svc *LndhubService) FetchOrCreateAssetAddr(ctx context.Context, userId uin
 		return "error: failed to create receive address.", err
 	}
 	// save new address to db
-	_, err = svc.CreateAddress(ctx, newAddr.Encoded, userId, assetId)
+	_, err = svc.CreateAddress(ctx, newAddr.Encoded, userId, assetId, amt)
 	if err != nil {
 		// TODO OK Relay-Compatible messages need a central location
 		return "error: failed to save receive address.", err

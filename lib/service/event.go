@@ -111,7 +111,7 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 			svc.Logger.Errorf("Failed to authenticate user for get rcv addr.")
 			return svc.RespondToNip4(ctx, "error: failed to authenticate", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		}
-		// * given an asset_id and amt, return the address
+		// given an asset_id and amt, return the address
 		// these values are prevalidated by CheckEvent
 		assetId := data[1]
 		amt, err := strconv.ParseUint(data[2], 10, 64)
@@ -119,18 +119,12 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 			svc.Logger.Errorf("Failed to parse amt field in content: %v", err)
 			return svc.RespondToNip4(ctx, "error: failed to parse amt", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		}
-		// * TODO check address table for existing address
-
-		// * TODO check address table for existing address, for requested asset
-
-		// create address if one is not found
-		msg, status := svc.GetAddressByAssetId(ctx, assetId, amt)
-		if !status {
-			svc.Logger.Errorf("Failed to get rcv address for asset from tapd: %s", msg)
-			return svc.RespondToNip4(ctx, "error: failed to get rcv address", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
+		// find or create address for user, by asset_id and amount
+		msg, err := svc.FetchOrCreateAssetAddr(ctx, uint64(existingUser.ID), assetId, amt)
+		if err != nil {
+			svc.Logger.Errorf("Failed to get rcv address for asset from tapd: %s", err)
+			return svc.RespondToNip4(ctx, "error: failed to get/create rcv address", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		}
-		// * TODO if address is new, insert it into the address table
-
 		// respond to client
 		return svc.RespondToNip4(ctx, msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
 	} else {
@@ -271,7 +265,6 @@ func (svc *LndhubService) GetUserIfExists(ctx context.Context, relayUri string, 
 		existingUser, err := svc.FindUserByPubkey(ctx, event.PubKey)
 		// check if user was found
 		if existingUser.ID > 0 {
-			svc.Logger.Errorf("Cannot create user that has already registered this pubkey")
 			// SUCCESS - user is authenticated
 			return existingUser, true
 		}

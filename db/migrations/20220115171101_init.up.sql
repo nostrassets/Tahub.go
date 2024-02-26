@@ -115,10 +115,10 @@ CREATE TABLE transaction_entries (
         ON DELETE CASCADE
 );
 --bun:split
-CREATE TABLE address (
+CREATE TABLE addresses (
     id SERIAL PRIMARY KEY,
     user_id bigint NOT NULL,
-    ta_asset_id character NOT NULL,
+    ta_asset_id character varying NOT NULL,
     amount bigint,
     addr character varying NOT NULL UNIQUE,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
