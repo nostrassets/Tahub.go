@@ -27,7 +27,7 @@ func NewKeySendController(svc *service.LndhubService) *KeySendController {
 }
 
 type KeySendRequestBody struct {
-	AssetID                 int64             `json:"asset_id" validate:"required,gt=1"`
+	TaAssetID                 string          `json:"ta_asset_id" validate:"required,gt=1"`
 	Amount                  int64             `json:"amount" validate:"required,gt=0"`
 	Destination             string            `json:"destination" validate:"required"`
 	Memo                    string            `json:"memo" validate:"omitempty"`
@@ -83,7 +83,7 @@ func (controller *KeySendController) KeySend(c echo.Context) error {
 		c.Logger().Errorf("Invalid keysend request body: %v", err)
 		return c.JSON(http.StatusBadRequest, responses.BadArgumentsError)
 	}
-	errResp := controller.checkKeysendPaymentAllowed(c, reqBody.Amount, reqBody.AssetID, userID)
+	errResp := controller.checkKeysendPaymentAllowed(c, reqBody.Amount, reqBody.TaAssetID, userID)
 	if errResp != nil {
 		c.Logger().Errorf("Failed to send keysend: %s", errResp.Message)
 		return c.JSON(errResp.HttpStatusCode, errResp)
@@ -120,9 +120,9 @@ func (controller *KeySendController) MultiKeySend(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, responses.BadArgumentsError)
 	}
 	// collect asset IDs
-	assetIds := []int64{}
+	assetIds := []string{}
 	for _, split := range reqBody.Keysends {
-		assetIds = append(assetIds, split.AssetID)
+		assetIds = append(assetIds, split.TaAssetID)
 
 		if err := c.Validate(&split); err != nil {
 			c.Logger().Errorf("Invalid keysend request body: %v", err)
@@ -175,7 +175,7 @@ func (controller *KeySendController) MultiKeySend(c echo.Context) error {
 	return c.JSON(status, result)
 }
 
-func (controller *KeySendController) checkKeysendPaymentAllowed(c echo.Context, amount, assetId int64, userID int64) (resp *responses.ErrorResponse) {
+func (controller *KeySendController) checkKeysendPaymentAllowed(c echo.Context, amount int64, assetId string, userID int64) (resp *responses.ErrorResponse) {
 	syntheticPayReq := &lnd.LNPayReq{
 		PayReq: &lnrpc.PayReq{
 			NumSatoshis: amount,

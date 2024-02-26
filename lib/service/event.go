@@ -158,7 +158,7 @@ func (svc *LndhubService) RespondToNip4(ctx context.Context, rawContent string, 
 	resp.CreatedAt = nostr.Now()
 	resp.PubKey = svc.Config.TahubPublicKey
 	resp.Kind = nostr.KindEncryptedDirectMessage
-	// TODO encrypt content
+	// encrypt content
 	sharedSecret, err := nip04.ComputeSharedSecret(userPubkey, svc.Config.TahubPrivateKey)
 	if err != nil {
 		svc.Logger.Errorf("Failed to compute shared secret for response to NIP4 dm: %v", err)
@@ -284,4 +284,59 @@ func (svc *LndhubService) GetUserIfExists(ctx context.Context, relayUri string, 
 		}
 		// something went wrong, could not explicitly authenticated
 		return nil, false
+}
+
+func (svc *LndhubService) SendNip4Notification(ctx context.Context, rawContent string, rcvPubkey string) error {
+	// setup nostr event
+	resp := nostr.Event{}
+	resp.CreatedAt = nostr.Now()
+	resp.PubKey = svc.Config.TahubPublicKey
+	resp.Kind = nostr.KindEncryptedDirectMessage
+	// shared secret
+	sharedSecret, err := nip04.ComputeSharedSecret(rcvPubkey, svc.Config.TahubPrivateKey)
+	if err != nil {
+		svc.Logger.Errorf("Failed to compute shared secret for response to NIP4 dm: %v", err)
+		return err
+	}
+	// encrypt content
+	encryptedContent, err := nip04.Encrypt(rawContent, sharedSecret)
+	if err != nil {
+		svc.Logger.Errorf("Generated shared secret but failed to encrypt: %v", err)
+		return err	
+	}
+	// set content
+	resp.Content = encryptedContent
+	// set tags
+	pTag := []string{"p", rcvPubkey}
+	resp.Tags = nostr.Tags{pTag}
+	// sign event
+	resp.Sign(svc.Config.TahubPrivateKey)
+	// get relays
+	relays, err := svc.GetRelays(ctx)
+	if err != nil {
+		svc.Logger.Errorf("Failed to get relays from db: %v", err)
+		return err
+	}
+	// broadcast to relays
+	for _, relay := range relays {
+		// NOTE
+		type SendFirstRelayURI string
+		typedUri := SendFirstRelayURI(relay.Uri)
+		broadcastCtx := context.WithValue(context.Background(), typedUri, relay.Uri)
+
+		conn, e := nostr.RelayConnect(broadcastCtx, relay.Uri)
+		// check connection to relay
+		if e != nil {
+			svc.Logger.Errorf("CRITICAL: failed to connect to relay while sending NIP4 event: %v", e)
+			continue
+		}
+		// publish to relay
+		publishedErr := conn.Publish(ctx, resp)
+		// check publish to relay
+		if publishedErr != nil {
+			svc.Logger.Errorf("CRITICAL: failed to publish to relay while sending NIP4 event: %v", e)
+			continue
+		}
+	}
+	return nil
 }

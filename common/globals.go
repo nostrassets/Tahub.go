@@ -1,7 +1,7 @@
 package common
 // bitcoin - init assets table row
 const BTC_INTERNAL_ASSET_ID = 1
-const BTC_TA_ASSET_ID       = "native-asset-bitcoin"
+const BTC_TA_ASSET_ID       = "btc"
 const BTC_ASSET_NAME        = "bitcoin"
 
 // https://lightning.engineering/api-docs/api/taproot-assets/universe/query-asset-stats#taprpcassettype

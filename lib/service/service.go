@@ -149,7 +149,7 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 
 }
 
-func (svc *LndhubService) OneAssetInMultiKeysend(arr []int64) bool {
+func (svc *LndhubService) OneAssetInMultiKeysend(arr []string) bool {
 	for i := 1; i < len(arr); i++ {
 		// compare every item to the first positioned item
 		if arr[i] != arr[0] {

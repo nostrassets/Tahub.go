@@ -50,15 +50,15 @@ CREATE TABLE assets (
 CREATE TABLE accounts (
     id SERIAL PRIMARY KEY,
     user_id bigint NOT NULL,
-    asset_id bigint NOT NULL,
+    ta_asset_id character varying NOT NULL,
     type character varying NOT NULL,
     CONSTRAINT fk_user
         FOREIGN KEY(user_id)
         REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_asset
-        FOREIGN KEY(asset_id)
-        REFERENCES assets(id)
+        FOREIGN KEY(ta_asset_id)
+        REFERENCES assets(ta_asset_id)
         ON DELETE NO ACTION
 );
 --bun:split
@@ -66,7 +66,7 @@ CREATE TABLE invoices (
     id SERIAL PRIMARY KEY,
     type character varying,
     user_id bigint,
-    asset_id bigint,
+    ta_asset_id character varying NOT NULL,
     amount bigint,
     memo character varying,
     description_hash character varying,
@@ -87,8 +87,8 @@ CREATE TABLE invoices (
         REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_asset
-        FOREIGN KEY(asset_id)
-        REFERENCES assets(id)
+        FOREIGN KEY(ta_asset_id)
+        REFERENCES assets(ta_asset_id)
         ON DELETE NO ACTION
 );
 --bun:split
@@ -132,7 +132,7 @@ CREATE TABLE transaction_entries (
     CONSTRAINT fk_debit_account
         FOREIGN KEY(debit_account_id)
         REFERENCES accounts(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
     CONSTRAINT fk_addr
         FOREIGN KEY(addr)
         REFERENCES addresses(addr)

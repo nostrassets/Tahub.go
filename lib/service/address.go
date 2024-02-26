@@ -5,7 +5,9 @@ import (
 	//"encoding/hex"
 	//"errors"
 
+	"github.com/getAlby/lndhub.go/common"
 	"github.com/getAlby/lndhub.go/db/models"
+	"github.com/uptrace/bun"
 )
 
 type AddressResponse struct {
@@ -33,7 +35,36 @@ func (svc *LndhubService) CreateAddress(ctx context.Context, address string, use
 	if err != nil {
 		return nil, err
 	}
-	return addr, nil
+	// add accounts for address
+	err = svc.DB.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		// insert new address
+		if _, err := tx.NewInsert().Model(addrObj).Exec(ctx); err != nil {
+			return err
+		}
+		// get account types
+		accountTypes := []string{
+			common.AccountTypeIncoming,
+			common.AccountTypeCurrent,
+			common.AccountTypeOutgoing,
+			common.AccountTypeFees,
+		}
+		// for each account type
+		for _, accountType := range accountTypes {
+			// create account
+			account := models.Account{
+				UserID: int64(userId), 
+				Type: accountType, 
+				TaAssetID: taAssetId,
+			}
+			// insert account
+			if _, err := tx.NewInsert().Model(&account).Exec(ctx); err != nil {
+				return err
+			}
+		}
+		// exit db transaction
+		return nil
+	})
+	return addr, err
 }
 
 func (svc * LndhubService) UpdateAddress(ctx context.Context, taAssetId string, userId uint64, address string, amt uint64) (addr *models.Address, err error) {
@@ -110,6 +141,16 @@ func (svc *LndhubService) FindAddress(ctx context.Context, userId uint64, taAsse
 	}
 	// success
 	return &addr, nil
+}
+
+func (svc *LndhubService) FindUserByAddress(ctx context.Context, addr string) (*models.User, error) {
+	var user models.User
+	// get user by address
+	err := svc.DB.NewSelect().Model(&user).Join("INNER JOIN addresses ON addresses.user_id = users.id").Where("addresses.addr = ?", addr).Limit(1).Scan(ctx)
+	if err != nil {
+		return &user, err
+	}
+	return &user, nil
 }
 
 // func decodedAddresses(addresses []models.Address) ([]AddressResponse, error) {

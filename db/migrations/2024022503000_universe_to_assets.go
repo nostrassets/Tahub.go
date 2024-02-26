@@ -57,7 +57,7 @@ func init() {
 		// hardcode bitcoin row
 		bitcoin := models.Asset{
 			AssetName: "bitcoin",
-			TaAssetID: "BTC",
+			TaAssetID: "btc",
 			AssetType: 0,
 		}
 		assets = append(assets, bitcoin)

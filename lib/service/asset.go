@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/hex"
+	b64 "encoding/base64"
 	"github.com/getAlby/lndhub.go/db/models"
+	"github.com/lightninglabs/taproot-assets/taprpc"
 )
 
 func (svc *LndhubService) CreateAsset(ctx context.Context, name string, tapdAssetId string, tapdAssetType int64) (asset *models.Asset, err error) {
@@ -57,3 +60,12 @@ func (svc *LndhubService) UpdateAsset(ctx context.Context, assetId int64) (asset
 	return asset, nil
 }
 
+func decodeAssetIdBytes(address *taprpc.Addr) (string, error) {
+	// hex decode the raw asset id bytes
+	decoded, err := hex.DecodeString(address.Encoded)
+	if err != nil {
+		return "", err
+	}
+	// then encode the hex format asset id to base64
+	return b64.StdEncoding.EncodeToString(decoded), nil
+}

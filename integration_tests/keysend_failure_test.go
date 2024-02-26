@@ -97,7 +97,7 @@ func (suite *KeySendFailureTestSuite) TestKeysendPayment() {
 	// check that balance was reverted
 	userId := getUserIdFromToken(suite.aliceToken)
 	// TODO hard-code asset ID for now
-	aliceBalance, err := suite.service.CurrentUserBalance(context.Background(), 1, userId)
+	aliceBalance, err := suite.service.CurrentUserBalance(context.Background(), common.BTC_TA_ASSET_ID, userId)
 	if err != nil {
 		fmt.Printf("Error when getting balance %v\n", err.Error())
 	}

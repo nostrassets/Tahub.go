@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getAlby/lndhub.go/common"
 	"github.com/getAlby/lndhub.go/lib"
 	"github.com/getAlby/lndhub.go/lib/responses"
 	"github.com/getAlby/lndhub.go/lib/service"
@@ -90,7 +91,7 @@ func (controller *PayInvoiceController) PayInvoice(c echo.Context) error {
 		lnPayReq.PayReq.NumSatoshis = amt
 	}
 	// TODO hard-coding this error as code is likely to be discarded for our purposes
-	resp, err := controller.svc.CheckOutgoingPaymentAllowed(c, lnPayReq, 1, userID)
+	resp, err := controller.svc.CheckOutgoingPaymentAllowed(c, lnPayReq, common.BTC_TA_ASSET_ID, userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, responses.GeneralServerError)
 	}

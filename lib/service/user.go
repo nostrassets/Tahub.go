@@ -34,7 +34,7 @@ func (svc *LndhubService) CreateUser(ctx context.Context, pubkey string) (user *
 		}
 		for _, accountType := range accountTypes {
 			// * NOTE - initial set of accounts are assigned to bitcoin, per the Assets table
-			account := models.Account{UserID: user.ID, Type: accountType, AssetID: common.BTC_INTERNAL_ASSET_ID}
+			account := models.Account{UserID: user.ID, Type: accountType, TaAssetID: common.BTC_TA_ASSET_ID}
 			if _, err := tx.NewInsert().Model(&account).Exec(ctx); err != nil {
 				return err
 			}
@@ -93,7 +93,7 @@ func (svc *LndhubService) FindUserByPubkey(ctx context.Context, pubkey string) (
 	return &user, nil
 }
 
-func (svc *LndhubService) CheckOutgoingPaymentAllowed(c echo.Context, lnpayReq *lnd.LNPayReq, assetId int64, userId int64) (result *responses.ErrorResponse, err error) {
+func (svc *LndhubService) CheckOutgoingPaymentAllowed(c echo.Context, lnpayReq *lnd.LNPayReq, assetId string, userId int64) (result *responses.ErrorResponse, err error) {
 	limits := svc.GetLimits(c)
 	if limits.MaxSendAmount > 0 {
 		if lnpayReq.PayReq.NumSatoshis > limits.MaxSendAmount {
@@ -152,7 +152,7 @@ func (svc *LndhubService) CheckOutgoingPaymentAllowed(c echo.Context, lnpayReq *
 	return nil, nil
 }
 
-func (svc *LndhubService) CheckIncomingPaymentAllowed(c echo.Context, amount, assetId int64, userId int64) (result *responses.ErrorResponse, err error) {
+func (svc *LndhubService) CheckIncomingPaymentAllowed(c echo.Context, amount int64, assetId string, userId int64) (result *responses.ErrorResponse, err error) {
 	limits := svc.GetLimits(c)
 	if limits.MaxReceiveAmount > 0 {
 		if amount > limits.MaxReceiveAmount {
@@ -225,7 +225,7 @@ func (svc *LndhubService) CalcFeeLimit(destination string, amount int64) int64 {
 	return limit
 }
 
-func (svc *LndhubService) CurrentUserBalance(ctx context.Context, assetId int64, userId int64) (int64, error) {
+func (svc *LndhubService) CurrentUserBalance(ctx context.Context, assetId string, userId int64) (int64, error) {
 	var balance int64
 
 	account, err := svc.AccountFor(ctx, common.AccountTypeCurrent, assetId, userId)
@@ -236,10 +236,10 @@ func (svc *LndhubService) CurrentUserBalance(ctx context.Context, assetId int64,
 	return balance, err
 }
 
-func (svc *LndhubService) AccountFor(ctx context.Context, accountType string, _assetId int64, userId int64) (models.Account, error) {
+func (svc *LndhubService) AccountFor(ctx context.Context, accountType string, assetId string, userId int64) (models.Account, error) {
 	account := models.Account{}
 	// TODO note the hardcoding of asset_id below
-	err := svc.DB.NewSelect().Model(&account).Where("user_id = ? AND asset_id=1 AND type= ?", userId, accountType).Limit(1).Scan(ctx)
+	err := svc.DB.NewSelect().Model(&account).Where("user_id = ? AND ta_asset_id='btc' AND type= ?", userId, accountType).Limit(1).Scan(ctx)
 	return account, err
 }
 

@@ -75,7 +75,7 @@ func (controller *KeySendController) KeySend(c echo.Context) error {
 		})
 	}
 	// TODO hard-coding value as code is likely to be discarded for us
-	resp, err := controller.svc.CheckOutgoingPaymentAllowed(c, lnPayReq, 1, userID)
+	resp, err := controller.svc.CheckOutgoingPaymentAllowed(c, lnPayReq, common.BTC_TA_ASSET_ID, userID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, responses.GeneralServerError)
 	}

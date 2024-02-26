@@ -17,6 +17,7 @@ import (
 	"github.com/getAlby/lndhub.go/lnd"
 	"github.com/getsentry/sentry-go"
 	"github.com/lightningnetwork/lnd/lnrpc"
+	"github.com/lightninglabs/taproot-assets/taprpc"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
 )
@@ -68,11 +69,11 @@ func (svc *LndhubService) SendInternalPayment(ctx context.Context, invoice *mode
 	}
 
 	// Get the user's current and incoming account for the transaction entry
-	recipientCreditAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, incomingInvoice.AssetID, incomingInvoice.UserID)
+	recipientCreditAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, incomingInvoice.TaAssetID, incomingInvoice.UserID)
 	if err != nil {
 		return sendPaymentResponse, err
 	}
-	recipientDebitAccount, err := svc.AccountFor(ctx, common.AccountTypeIncoming, incomingInvoice.AssetID, incomingInvoice.UserID)
+	recipientDebitAccount, err := svc.AccountFor(ctx, common.AccountTypeIncoming, incomingInvoice.TaAssetID, incomingInvoice.UserID)
 	if err != nil {
 		return sendPaymentResponse, err
 	}
@@ -190,17 +191,17 @@ func (svc *LndhubService) PayInvoice(ctx context.Context, invoice *models.Invoic
 	userId := invoice.UserID
 
 	// Get the user's current and outgoing account for the transaction entry
-	debitAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, invoice.AssetID, userId)
+	debitAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, invoice.TaAssetID, userId)
 	if err != nil {
 		svc.Logger.Errorf("Could not find current account user_id:%v", userId)
 		return nil, err
 	}
-	creditAccount, err := svc.AccountFor(ctx, common.AccountTypeOutgoing, invoice.AssetID, userId)
+	creditAccount, err := svc.AccountFor(ctx, common.AccountTypeOutgoing, invoice.TaAssetID, userId)
 	if err != nil {
 		svc.Logger.Errorf("Could not find outgoing account user_id:%v", userId)
 		return nil, err
 	}
-	feeAccount, err := svc.AccountFor(ctx, common.AccountTypeFees, invoice.AssetID, userId)
+	feeAccount, err := svc.AccountFor(ctx, common.AccountTypeFees, invoice.TaAssetID, userId)
 	if err != nil {
 		svc.Logger.Errorf("Could not find outgoing account user_id:%v", userId)
 		return nil, err
@@ -302,7 +303,35 @@ func (svc *LndhubService) HandleFailedPayment(ctx context.Context, invoice *mode
 	}
 	return err
 }
+func (svc *LndhubService) InsertTapdTransactionEntry(ctx context.Context, userId int64, rcvEvent *taprpc.AssetReceiveCompleteEvent, creditAccount, debitAccount models.Account) (entry models.TransactionEntry, err error) {
+	entry = models.TransactionEntry{
+		UserID:          userId,
+		CreditAccountID: creditAccount.ID,
+		DebitAccountID:  debitAccount.ID,
+		Amount:          int64(rcvEvent.Address.Amount),
+		Outpoint: 	     rcvEvent.Outpoint,
+		Addr: 		     rcvEvent.Address.Encoded,
+		EntryType:       models.EntryTypeIncoming,
+	}
 
+	tx, err := svc.DB.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return entry, err
+	}
+
+	// The DB constraints make sure the user actually has enough balance for the transaction
+	// If the user does not have enough balance this call fails
+	_, err = tx.NewInsert().Model(&entry).Exec(ctx)
+	if err != nil {
+		return entry, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return entry, err
+	}
+	return entry, err
+}
 func (svc *LndhubService) InsertTransactionEntry(ctx context.Context, invoice *models.Invoice, creditAccount, debitAccount, feeAccount models.Account) (entry models.TransactionEntry, err error) {
 	entry = models.TransactionEntry{
 		UserID:          invoice.UserID,
@@ -462,7 +491,7 @@ func (svc *LndhubService) HandleSuccessfulPayment(ctx context.Context, invoice *
 		return err
 	}
 
-	userBalance, err := svc.CurrentUserBalance(ctx, invoice.AssetID, parentEntry.UserID)
+	userBalance, err := svc.CurrentUserBalance(ctx, invoice.TaAssetID, parentEntry.UserID)
 	if err != nil {
 		sentry.CaptureException(err)
 		svc.Logger.Errorf("Could not fetch user balance user_id:%v invoice_id:%v error %s", invoice.UserID, invoice.ID, err.Error())

@@ -81,7 +81,7 @@ func (suite *PaymentTestAsyncErrorsSuite) TestExternalAsyncFailingInvoice() {
 	// TODO this may transition to being a bitcoin specific test or, 
 	//		to handle / iterate multiple assets we include in a test environment
 	//		* asset id hard-coded for now
-	assetId := 1 // bitcoin / sats
+	assetId := common.BTC_TA_ASSET_ID // bitcoin / sats
 	// fund user account
 	invoiceResponse := suite.createAddInvoiceReq(userFundingSats, "integration test external payment user", suite.userToken)
 	err := suite.mlnd.mockPaidInvoice(invoiceResponse, 0, false, nil)
@@ -105,7 +105,7 @@ func (suite *PaymentTestAsyncErrorsSuite) TestExternalAsyncFailingInvoice() {
 
 	// check to see that balance was reduced
 	userId := getUserIdFromToken(suite.userToken)
-	userBalance, err := suite.service.CurrentUserBalance(context.Background(), int64(assetId), userId)
+	userBalance, err := suite.service.CurrentUserBalance(context.Background(), assetId, userId)
 	if err != nil {
 		fmt.Printf("Error when getting balance %v\n", err.Error())
 	}
@@ -117,7 +117,7 @@ func (suite *PaymentTestAsyncErrorsSuite) TestExternalAsyncFailingInvoice() {
 	time.Sleep(2 * time.Second)
 
 	// check that balance was reverted and invoice is in error state
-	userBalance, err = suite.service.CurrentUserBalance(context.Background(), int64(assetId), userId)
+	userBalance, err = suite.service.CurrentUserBalance(context.Background(), assetId, userId)
 	if err != nil {
 		fmt.Printf("Error when getting balance %v\n", err.Error())
 	}
