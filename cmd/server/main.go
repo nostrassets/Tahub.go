@@ -181,13 +181,15 @@ func main() {
 	// Subscribe to LND invoice updates in the background
 	backgroundWg.Add(1)
 	go func() {
-		err = svc.StartInvoiceRoutine(backGroundCtx)
+		//err = svc.StartInvoiceRoutine(backGroundCtx)
+		err = svc.StartReceiveSubscription(backGroundCtx)
 		if err != nil {
 			sentry.CaptureException(err)
 			//we want to restart in case of an error here
 			svc.Logger.Fatal(err)
 		}
-		svc.Logger.Info("Invoice routine done")
+		//svc.Logger.Info("Invoice routine done")
+		svc.Logger.Info("Tapd Receive routine done")
 		backgroundWg.Done()
 	}()
 	// get relays from DB

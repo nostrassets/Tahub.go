@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	//"time"
@@ -63,13 +64,18 @@ func (svc *LndhubService) StartRelayRoutine(ctx context.Context, uri string, las
 	return nil
 }
 
-func (svc *LndhubService) StartReceiveSubscription(ctx context.Context, url string) (err error) {
+func (svc *LndhubService) StartReceiveSubscription(ctx context.Context) (err error) {
 	// TODO what is the proper way to not have a timeout on the context?
 	if svc.RabbitMQClient != nil {
-		// TODO populate
-		return nil
+		// TODO populate - apply sentry and rabbit mq
+		return errors.New("RabbitMQ not implemented")
 	} else {
-		// TODO populate
+		err = svc.TapdReceiveSubscription(ctx)
+		if err != nil && err != context.Canceled {
+			// in case of an error in this routine, we want to restart
+			return err
+		}
+
 		return nil
 	}
 }
