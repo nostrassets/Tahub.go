@@ -92,29 +92,6 @@ CREATE TABLE invoices (
         ON DELETE NO ACTION
 );
 --bun:split
-CREATE TABLE transaction_entries (
-    id SERIAL PRIMARY KEY,
-    user_id bigint NOT NULL,
-    invoice_id bigint NOT NULL,
-    parent_id bigint,
-    credit_account_id bigint NOT NULL,
-    debit_account_id bigint NOT NULL,
-    amount bigint NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT fk_user
-        FOREIGN KEY(user_id)
-        REFERENCES users(id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_credit_account
-        FOREIGN KEY(credit_account_id)
-        REFERENCES accounts(id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_debit_account
-        FOREIGN KEY(debit_account_id)
-        REFERENCES accounts(id)
-        ON DELETE CASCADE
-);
---bun:split
 CREATE TABLE addresses (
     id SERIAL PRIMARY KEY,
     user_id bigint NOT NULL,
@@ -130,6 +107,35 @@ CREATE TABLE addresses (
     CONSTRAINT fk_asset
         FOREIGN KEY(ta_asset_id)
         REFERENCES assets(ta_asset_id)
+        ON DELETE NO ACTION
+);
+--bun:split
+CREATE TABLE transaction_entries (
+    id SERIAL PRIMARY KEY,
+    user_id bigint NOT NULL,
+    invoice_id bigint,
+    parent_id bigint,
+    addr character varying,
+    credit_account_id bigint NOT NULL,
+    debit_account_id bigint NOT NULL,
+    amount bigint NOT NULL,
+    outpoint character varying,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT fk_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_credit_account
+        FOREIGN KEY(credit_account_id)
+        REFERENCES accounts(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_debit_account
+        FOREIGN KEY(debit_account_id)
+        REFERENCES accounts(id)
+        ON DELETE CASCADE
+    CONSTRAINT fk_addr
+        FOREIGN KEY(addr)
+        REFERENCES addresses(addr)
         ON DELETE NO ACTION
 );
 --bun:split

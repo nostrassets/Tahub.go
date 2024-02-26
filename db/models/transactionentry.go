@@ -20,10 +20,12 @@ type TransactionEntry struct {
 	ID              int64             `bun:",pk,autoincrement"`
 	UserID          int64             `bun:",notnull"`
 	User            *User             `bun:"rel:belongs-to,join:user_id=id"`
-	InvoiceID       int64             `bun:",notnull"`
+	InvoiceID       int64             `bun:",nullzero"`
 	Invoice         *Invoice          `bun:"rel:belongs-to,join:invoice_id=id"`
 	ParentID        int64             `bun:",nullzero"`
 	Parent          *TransactionEntry `bun:"rel:belongs-to"`
+	Addr            string			  `bun:",nullzero"`
+	Address		    *Address          `bun:"rel:belongs-to,join:addr=address"`
 	CreditAccountID int64             `bun:",notnull"`
 	FeeReserve      *TransactionEntry `bun:"rel:belongs-to"`
 	ServiceFee      *TransactionEntry `bun:"rel:belongs-to"`
@@ -33,4 +35,5 @@ type TransactionEntry struct {
 	Amount          int64             `bun:",notnull"`
 	CreatedAt       time.Time         `bun:",nullzero,notnull,default:current_timestamp"`
 	EntryType       string
+	Outpoint        string 
 }
