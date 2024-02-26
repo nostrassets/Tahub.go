@@ -8,8 +8,7 @@ CREATE TABLE relays (
 --bun:split
 INSERT INTO relays(id, uri, relay_name) SELECT 1, 'wss://dev-relay.nostrassets.com', 'internal-dev' WHERE NOT EXISTS (SELECT id FROM relays WHERE id = 1);
 --bun:split
-INSERT INTO relays(id, uri, relay_name) SELECT 2, 'wss://relay.damus.io', 'damus' WHERE NOT EXISTS (SELECT id FROM relays WHERE id = 2);
---bun:split
+
 CREATE TABLE filters (
     relay_id bigint PRIMARY KEY,
     last_event_seen bigint,
@@ -22,8 +21,6 @@ CREATE TABLE filters (
 );
 --bun:split
 INSERT INTO filters(relay_id, last_event_seen) SELECT 1, 1708201481 WHERE NOT EXISTS (SELECT relay_id FROM filters WHERE relay_id = 1);
---bun:split
-INSERT INTO filters(relay_id, last_event_seen) SELECT 2, 1708201481 WHERE NOT EXISTS (SELECT relay_id FROM filters WHERE relay_id = 2);
 --bun:split
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -43,7 +40,7 @@ CREATE TABLE events (
 --bun:split
 CREATE TABLE assets (
     id SERIAL PRIMARY KEY,
-    ta_asset_id character varying NOT NULL,
+    ta_asset_id character varying NOT NULL UNIQUE,
     asset_name character varying NOT NULL UNIQUE,
     asset_type int DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -121,7 +118,8 @@ CREATE TABLE transaction_entries (
 CREATE TABLE address (
     id SERIAL PRIMARY KEY,
     user_id bigint NOT NULL,
-    asset_id bigint NOT NULL,
+    ta_asset_id character NOT NULL,
+    amount bigint,
     addr character varying NOT NULL UNIQUE,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone,
@@ -130,8 +128,8 @@ CREATE TABLE address (
         REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_asset
-        FOREIGN KEY(asset_id)
-        REFERENCES assets(id)
+        FOREIGN KEY(ta_asset_id)
+        REFERENCES assets(ta_asset_id)
         ON DELETE NO ACTION
 );
 --bun:split

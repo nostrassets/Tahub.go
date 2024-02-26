@@ -105,6 +105,12 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 		// return universe assets
 		return svc.RespondToNip4(ctx, msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
 	} else if data[0] == "TAHUB_GET_RCV_ADDR" {
+		// authentication required
+		existingUser, isAuthenticated := svc.GetUserIfExists(ctx, relayUri, decoded)
+		if existingUser == nil || !isAuthenticated {
+			svc.Logger.Errorf("Failed to authenticate user for get rcv addr.")
+			return svc.RespondToNip4(ctx, "error: failed to authenticate", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
+		}
 		// * given an asset_id and amt, return the address
 		// these values are prevalidated by CheckEvent
 		assetId := data[1]
@@ -113,7 +119,7 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 			svc.Logger.Errorf("Failed to parse amt field in content: %v", err)
 			return svc.RespondToNip4(ctx, "error: failed to parse amt", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		}
-		// * TODO check asset table for existing asset 
+		// * TODO check address table for existing address
 
 		// * TODO check address table for existing address, for requested asset
 
@@ -257,4 +263,32 @@ func (svc *LndhubService) HandleGetPublicKey() (responses.GetServerPubkeyRespons
 	}
 	ResponseBody.TahubNpub = npub
 	return ResponseBody, nil
+}
+
+// * apply this function to the other protected calls, like getting a rcv address, sending and checking balances
+func (svc *LndhubService) GetUserIfExists(ctx context.Context, relayUri string, event nostr.Event) (user *models.User, isAuthenticated bool) {
+		// check if user exists
+		existingUser, err := svc.FindUserByPubkey(ctx, event.PubKey)
+		// check if user was found
+		if existingUser.ID > 0 {
+			svc.Logger.Errorf("Cannot create user that has already registered this pubkey")
+			// SUCCESS - user is authenticated
+			return existingUser, true
+		}
+		// confirm no error occurred in checking if the user exists
+		if err != nil {
+			msg := err.Error()
+			// TODO consider this and try to make more robust
+			if msg == "sql: no rows in result set" {
+				svc.Logger.Info("No user found.")
+				// unauthenticated
+				return nil, false
+			} else {
+				svc.Logger.Errorf("Unable to verify the pubkey has not already been registered: %v", err)
+				// unauthenticated
+				return nil, false
+			}
+		}
+		// something went wrong, could not explicitly authenticated
+		return nil, false
 }

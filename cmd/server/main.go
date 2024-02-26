@@ -190,7 +190,7 @@ func main() {
 		svc.Logger.Info("Invoice routine done")
 		backgroundWg.Done()
 	}()
-	// TODO get relays from DB
+	// get relays from DB
 	relays, err := svc.GetRelays(backGroundCtx)
 	if err != nil && len(relays) > 0 {
 		sentry.CaptureException(err)
