@@ -12,6 +12,9 @@ const (
 )
 
 const (
+	TapdReceiveEvent = "tapd_receive_event"
+	TapdSendEvent    = "tapd_send_event"
+	
 	InvoiceTypeOutgoing = "outgoing"
 	InvoiceTypePaid     = "paid_invoice"
 	InvoiceTypeIncoming = "incoming"

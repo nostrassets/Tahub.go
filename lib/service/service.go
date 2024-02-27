@@ -39,6 +39,7 @@ type LndhubService struct {
 	RabbitMQClient rabbitmq.Client
 	Logger         *lecho.Logger
 	InvoicePubSub  *Pubsub
+	TaprootAssetPubSub *TapdPubsub
 }
 
 func (svc *LndhubService) ParseInt(value interface{}) (int64, error) {

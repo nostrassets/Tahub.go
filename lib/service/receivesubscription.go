@@ -53,7 +53,7 @@ func (svc *LndhubService) HandleTapdReceiveEvent(ctx context.Context, rcvEvent *
 		// TODO something is going wrong
 		svc.Logger.Error("backoff event received")
 		// TODO apply sentry
-		return nil
+		//return nil
 	}
 
 	// check complete event
