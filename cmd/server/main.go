@@ -148,7 +148,7 @@ func main() {
 		TapdClient:     tapdClient,
 		Logger:         logger,
 		InvoicePubSub:  service.NewPubsub(),
-		TaprootAssetPubSub: service.NewTapdPubsub(),
+		//TaprootAssetPubSub: service.NewTapdPubsub(),
 		RabbitMQClient: rabbitmqClient,
 	}
 
