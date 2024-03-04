@@ -90,7 +90,8 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 		return true, payload, nil
 	case "TAHUB_GET_UNIVERSE_ASSETS":
 		return true, payload, nil
-
+	case "TAHUB_GET_BALANCES":
+		return true, payload, nil
 	case "TAHUB_GET_RCV_ADDR":
 		// this action must have three parts to the content
 		if len(data) != 3 {
@@ -113,7 +114,7 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 
 	case "TAHUB_SEND_ASSET":
 		// this action must have three parts to the content
-		if len(data) != 3 {
+		if len(data) != 2 {
 			return false, payload, errors.New("Invalid 'Content' for TAHUB_SEND_ASSET.")
 		}
 		// Validate specific fields for TAHUB_SEND_ASSET event
@@ -127,21 +128,18 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 			return false, payload, err
 		}
 		// validate amt to send
-		amt, err := strconv.ParseFloat(data[2], 64)
-		// TODO consider amt thresholds and their implication there
-		if err != nil || amt < 0 {
-			return false, payload, errors.New("Field 'amt' must be a valid number and non-zero")
-		}
-		// validate fee for tx
-		fee, err := strconv.ParseFloat(data[3], 64)
-		// TODO consider fee thresholds, limits, etc. that make sense to validate/apply here
-		if err != nil || fee != 0 {
-			return false, payload, errors.New("Field 'fee' must be a valid number")
-		}
+		// amt, err := strconv.ParseFloat(data[2], 64)
+		// // TODO consider amt thresholds and their implication there
+		// if err != nil || amt < 0 {
+		// 	return false, payload, errors.New("Field 'amt' must be a valid number and non-zero")
+		// }
+		// // validate fee for tx
+		// fee, err := strconv.ParseFloat(data[3], 64)
+		// // TODO consider fee thresholds, limits, etc. that make sense to validate/apply here
+		// if err != nil || fee != 0 {
+		// 	return false, payload, errors.New("Field 'fee' must be a valid number")
+		// }
 
-		return true, payload, nil
-
-	case "TAHUB_GET_BALANCES":
 		return true, payload, nil
 
 	default:

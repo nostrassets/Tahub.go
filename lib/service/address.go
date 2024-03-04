@@ -30,27 +30,22 @@ func (svc *LndhubService) CreateAddress(ctx context.Context, address string, use
 	addrObj.UserId = userId
 	addrObj.TaAssetID = taAssetId
 	addrObj.Amount = amt
-
-	_, err = svc.DB.NewInsert().Model(addrObj).Exec(ctx)
-	if err != nil {
-		return nil, err
-	}
 	// add accounts for address
 	err = svc.DB.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		// insert new address
 		if _, err := tx.NewInsert().Model(addrObj).Exec(ctx); err != nil {
 			return err
 		}
-		// get account types
+		// get account types - ex fees for non-bitcoin accounts
 		accountTypes := []string{
 			common.AccountTypeIncoming,
 			common.AccountTypeCurrent,
 			common.AccountTypeOutgoing,
-			common.AccountTypeFees,
+			//common.AccountTypeFees,
 		}
 		// for each account type
 		for _, accountType := range accountTypes {
-			// create account
+			// create account - TODO ensure joint uniqueness on type/ta_asset_id
 			account := models.Account{
 				UserID: int64(userId), 
 				Type: accountType, 

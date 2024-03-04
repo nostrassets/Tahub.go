@@ -3,10 +3,8 @@ package migrations
 import (
 	"context"
 	"encoding/hex"
-	b64 "encoding/base64"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/getAlby/lndhub.go/db/models"
 	"github.com/getAlby/lndhub.go/lib"
@@ -16,6 +14,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/lightninglabs/taproot-assets/taprpc/universerpc"
 	"github.com/uptrace/bun"
+	"golang.org/x/exp/slices"
 )
 
 func init() {
@@ -61,26 +60,35 @@ func init() {
 			AssetType: 0,
 		}
 		assets = append(assets, bitcoin)
+		// defend bulk list of assets from having multiple groups of the same asset ID
+		assetIds := []string{}
 		// iterate over universe assets
-		for assetId, root := range res.UniverseRoots {
-			// get human-readable asset ID
-			rawAssetId := strings.Split(assetId, "-")[1]
-			decodedAssetId, err := hex.DecodeString(rawAssetId)
-			// check error
+		for _, root := range res.UniverseRoots {
+			// get asset stats, to avoid group ID use in ID spot on GetUniverseAssets
+			req := universerpc.AssetStatsQuery{
+				AssetNameFilter: root.AssetName,
+			}
+			assetStats, err := tapdClient.GetAssetStats(ctx, &req)
+			// check for error or non-specifc filter on asset name
 			if err != nil {
 				return err
 			}
-			// final form
-			base64AssetId := b64.StdEncoding.EncodeToString(decodedAssetId)
-			// populate asset model
-			asset := models.Asset{
-				AssetName: root.AssetName,
-				TaAssetID: base64AssetId,
-				// TODO this is not on the universe rpc. hard-code for now
-				AssetType: 0,
+			assetIdBytes := assetStats.AssetStats[0].GroupAnchor.AssetId
+			decodedAssetId := hex.EncodeToString(assetIdBytes)
+			// check for duplicate asset
+			if !slices.Contains(assetIds, decodedAssetId) {
+				// populate asset model
+				asset := models.Asset{
+					AssetName: root.AssetName,
+					TaAssetID: decodedAssetId,
+					// TODO this is not on the universe rpc. hard-code for now
+					AssetType: 0,
+				}
+				// append for bulk upsert
+				assets = append(assets, asset)
+				// add to checklist
+				assetIds = append(assetIds, decodedAssetId)
 			}
-			// append for bulk upsert
-			assets = append(assets, asset)
 		}
 		// bulk upsert of assets
 		_, err = db.NewInsert().Model(&assets).On("conflict (asset_name) do nothing").Exec(ctx)

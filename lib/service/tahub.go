@@ -3,13 +3,9 @@ package service
 import (
 	"context"
 	b64 "encoding/base64"
-	//"encoding/hex"
+	"encoding/hex"
 	"fmt"
-	//"slices"
-	//"strings"
-
 	"github.com/lightninglabs/taproot-assets/taprpc"
-	//"github.com/lightninglabs/taproot-assets/taprpc/universerpc"
 )
 
 type AssetRoot struct {
@@ -65,6 +61,41 @@ func (svc *LndhubService) GetUniverseAssets(ctx context.Context) (okMsg string, 
 	return okSuccessMsg, true
 }
 
+func  (svc *LndhubService) BalanceByAsset(ctx context.Context) (okMsg string, success bool) {
+	/// * TODO this is a placeholder for now use account_ledger population on RecieveNotification Subscription
+	filter := taprpc.ListBalancesRequest_AssetId{AssetId: true}
+	req := taprpc.ListBalancesRequest{GroupBy: &filter}
+	balances, err := svc.TapdClient.ListBalances(ctx, &req)
+	if err != nil {
+		// TODO OK Relay-Compatible messages need a central location
+		return "error: failed to fetch balances.", false
+	}
+	aggBalances := make(map[string]uint64)
+	var okSuccessMsg = "balances: "
+	for _, balance := range balances.AssetBalances {
+
+		// seen a group of this asset already
+		bal, ok := aggBalances[balance.AssetGenesis.Name]
+		if ok {
+			aggBalances[balance.AssetGenesis.Name] = bal + balance.Balance
+		} else {
+			// add to map
+			name := balance.AssetGenesis.Name
+			aggBalances[name] = balance.Balance
+		}
+	}
+	// check for no len
+	if len(aggBalances) == 0 {
+		// TODO OK Relay-Compatible messages need a central location
+		return "balance: 0", false
+	}
+	// success message 
+	for asset, balance := range aggBalances {
+		okSuccessMsg = okSuccessMsg + fmt.Sprintf("%s %d,", asset, balance)
+	}
+	return okSuccessMsg, true
+}
+
 func (svc *LndhubService) GetAddressByAssetId(ctx context.Context, assetId string, amt uint64) (okMsg string, success bool) {
 	decoded, err := b64.StdEncoding.DecodeString(assetId)
 	if err != nil {
@@ -84,6 +115,37 @@ func (svc *LndhubService) GetAddressByAssetId(ctx context.Context, assetId strin
 	return fmt.Sprintf("address: %s", newAddr.Encoded), true
 }
 
+func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, addr string) (string, bool) {
+	// decode addr
+	req := taprpc.DecodeAddrRequest{Addr: addr}
+	_, err := svc.TapdClient.GetDecodedAddress(ctx, &req)
+	if err != nil {
+		// TODO OK Relay-Compatible messages need a central location
+		return "error: failed to decode address.", false
+	}
+	// check amount
+	// TODO implement once receiver subscription is inserting transaction entries
+	var hasFunding = true
+	//sendAmt := decodedAddr.Amount
+	//sendAssetId := hex.EncodeToString(decodedAddr.AssetId)
+	if !hasFunding {
+		// TODO OK Relay-Compatible messages need a central location
+		return "error: insufficient funds.", false
+	}
+	// send asset
+	// TODO estimate fee rate
+	sendReq := taprpc.SendAssetRequest{
+		TapAddrs: []string{addr},
+	}
+	_, err = svc.TapdClient.SendAsset(ctx, &sendReq)
+	if err != nil {
+		// TODO OK Relay-Compatible messages need a central location
+		return "error: failed to send asset.", false
+	}
+	// return success message
+	return "success: asset sent.", true
+}
+
 func (svc *LndhubService) FetchOrCreateAssetAddr(ctx context.Context, userId uint64, assetId string, amt uint64) (string, error) {
 	// this is aware of amount so we can return early if an existing address is found
 	addr, err := svc.FindAddress(ctx, userId, assetId, amt)
@@ -92,21 +154,11 @@ func (svc *LndhubService) FetchOrCreateAssetAddr(ctx context.Context, userId uin
 		return "error: failed to check on existing address.", err
 	}
 	if addr != nil {
-		// // decode db address
-		// addrString, err := decodeDbAddressToString(addr.Addr)
-		// // check decode error
-		// if err != nil {
-		// 	return "error: failed to decode existing address.", err
-		// }
-
-		// // return existing address early
-		// return fmt.Sprintf("address: %s", addrString), nil
-		
 		// return existing address early
 		return fmt.Sprintf("address: %s", addr.Addr), nil
 	}
 	// decode assetId for tapd request
-	decoded, err := b64.StdEncoding.DecodeString(assetId)
+	decoded, err := hex.DecodeString(assetId)
 	if err != nil {
 		// TODO OK Relay-Compatible messages need a central location
 		return "error: failed to parse assetID.", err	

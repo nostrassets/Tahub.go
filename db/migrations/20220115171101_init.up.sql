@@ -11,7 +11,7 @@ INSERT INTO relays(id, uri, relay_name) SELECT 1, 'wss://dev-relay.nostrassets.c
 
 CREATE TABLE filters (
     relay_id bigint PRIMARY KEY,
-    last_event_seen bigint,
+    last_event_seen bigint DEFAULT extract(epoch from now()) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone,
     CONSTRAINT fk_relay
@@ -20,7 +20,7 @@ CREATE TABLE filters (
         ON DELETE CASCADE
 );
 --bun:split
-INSERT INTO filters(relay_id, last_event_seen) SELECT 1, 1708201481 WHERE NOT EXISTS (SELECT relay_id FROM filters WHERE relay_id = 1);
+INSERT INTO filters(relay_id) SELECT 1 WHERE NOT EXISTS (SELECT relay_id FROM filters WHERE relay_id = 1);
 --bun:split
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,

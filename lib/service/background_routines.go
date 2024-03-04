@@ -42,7 +42,6 @@ func (svc *LndhubService) StartRelayRoutine(ctx context.Context, uri string, las
 
 	go func() {
 		<-sub.EndOfStoredEvents
-		// TODO consider this spot for inerting
 		// last seen filter
 		cancel()
 	}()

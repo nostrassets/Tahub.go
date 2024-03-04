@@ -123,8 +123,20 @@ func (wrapper *TAPDWrapper) GetUniverseAssets(ctx context.Context, req *universe
 	return wrapper.universeClient.AssetRoots(ctx, req, options...)
 }
 
+func (wrapper *TAPDWrapper) GetAssetStats(ctx context.Context, req *universerpc.AssetStatsQuery, options ...grpc.CallOption) (*universerpc.UniverseAssetStats, error) {
+	return wrapper.universeClient.QueryAssetStats(ctx, req, options...)
+}
+
 func (wrapper *TAPDWrapper) NewAddress(ctx context.Context, req *taprpc.NewAddrRequest, options ...grpc.CallOption) (*taprpc.Addr, error) {
 	return wrapper.client.NewAddr(ctx, req, options...)
+}
+
+func (wrapper *TAPDWrapper) GetDecodedAddress(ctx context.Context, req *taprpc.DecodeAddrRequest, options ...grpc.CallOption) (*taprpc.Addr, error) {
+	return wrapper.client.DecodeAddr(ctx, req, options...)
+}
+
+func (wrapper *TAPDWrapper) SendAsset(ctx context.Context, req *taprpc.SendAssetRequest, options ...grpc.CallOption) (*taprpc.SendAssetResponse, error) {
+	return wrapper.client.SendAsset(ctx, req, options...)
 }
 
 func (wrapper *TAPDWrapper) SubscribeReceiveAssetEvent(ctx context.Context, req *taprpc.SubscribeReceiveAssetEventNtfnsRequest, options ...grpc.CallOption) (SubscribeReceiveAssetEventWrapper, error) {
