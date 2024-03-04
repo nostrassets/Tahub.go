@@ -1,22 +1,12 @@
 package service
 
 import (
-	//"context"
-	//"crypto/rand"
-	//b64 "encoding/base64"
 	"errors"
 	"fmt"
-
-	//"math/big"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/btcsuite/btcutil/bech32"
-
-	// "github.com/getAlby/lndhub.go/db/models"
-	//"github.com/getAlby/lndhub.go/lib/responses"
-	// "github.com/getAlby/lndhub.go/lib/tokens"
 	"github.com/getAlby/lndhub.go/lnd"
 	"github.com/getAlby/lndhub.go/rabbitmq"
 	"github.com/getAlby/lndhub.go/tapd"
@@ -26,7 +16,6 @@ import (
 	"github.com/nbd-wtf/go-nostr/nip04"
 	"github.com/uptrace/bun"
 	"github.com/ziflex/lecho/v3"
-	//"golang.org/x/crypto/bcrypt"
 )
 
 const alphaNumBytes = random.Alphanumeric
@@ -123,10 +112,10 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 			return false, payload, errors.New("Field 'ADDR' must have a value")
 		}
 		// decode the address (str, bytes, err)
-		_, _, err := bech32.Decode(data[1])
-		if err != nil {
-			return false, payload, err
-		}
+		// _, _, err := bech32.Decode(data[1])
+		// if err != nil {
+		// 	return false, payload, err
+		// }
 		// validate amt to send
 		// amt, err := strconv.ParseFloat(data[2], 64)
 		// // TODO consider amt thresholds and their implication there
