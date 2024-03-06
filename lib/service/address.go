@@ -17,7 +17,7 @@ type AddressResponse struct {
 }
 
 
-func (svc *LndhubService) CreateAddress(ctx context.Context, address string, userId uint64, taAssetId string, amt uint64) (addr *models.Address, err error) {
+func (svc *LndhubService) CreateAddress(ctx context.Context, address string, userId uint64, taAssetId string, amt uint64, createAccounts bool) (addr *models.Address, err error) {
 	addrObj := &models.Address{}
 	// encAddr := make([]byte, hex.EncodedLen(len(address)))
 	// // hex encode address for sql length issue
@@ -36,24 +36,27 @@ func (svc *LndhubService) CreateAddress(ctx context.Context, address string, use
 		if _, err := tx.NewInsert().Model(addrObj).Exec(ctx); err != nil {
 			return err
 		}
-		// get account types - ex fees for non-bitcoin accounts
-		accountTypes := []string{
-			common.AccountTypeIncoming,
-			common.AccountTypeCurrent,
-			common.AccountTypeOutgoing,
-			//common.AccountTypeFees,
-		}
-		// for each account type
-		for _, accountType := range accountTypes {
-			// create account - TODO ensure joint uniqueness on type/ta_asset_id
-			account := models.Account{
-				UserID: int64(userId), 
-				Type: accountType, 
-				TaAssetID: taAssetId,
+		// check if we need to create accounts
+		if createAccounts {
+			// get account types - ex fees for non-bitcoin accounts
+			accountTypes := []string{
+				common.AccountTypeIncoming,
+				common.AccountTypeCurrent,
+				common.AccountTypeOutgoing,
+				//common.AccountTypeFees,
 			}
-			// insert account
-			if _, err := tx.NewInsert().Model(&account).Exec(ctx); err != nil {
-				return err
+			// for each account type
+			for _, accountType := range accountTypes {
+				// create account - TODO ensure joint uniqueness on type/ta_asset_id
+				account := models.Account{
+					UserID: int64(userId), 
+					Type: accountType, 
+					TaAssetID: taAssetId,
+				}
+				// insert account
+				if _, err := tx.NewInsert().Model(&account).Exec(ctx); err != nil {
+					return err
+				}
 			}
 		}
 		// exit db transaction
@@ -138,14 +141,26 @@ func (svc *LndhubService) FindAddress(ctx context.Context, userId uint64, taAsse
 	return &addr, nil
 }
 
-func (svc *LndhubService) FindUserByAddress(ctx context.Context, addr string) (*models.User, error) {
-	var user models.User
-	// get user by address
-	err := svc.DB.NewSelect().Model(&user).Join("INNER JOIN addresses ON addresses.user_id = users.id").Where("addresses.addr = ?", addr).Limit(1).Scan(ctx)
+func (svc *LndhubService) FindAddresses(ctx context.Context, userId uint64, taAssetId string) ([]models.Address, error) {
+	addresses := []models.Address{}
+	err := svc.DB.NewSelect().Model(&addresses).Where("user_id = ? AND ta_asset_id = ?", userId, taAssetId).Scan(ctx)
 	if err != nil {
-		return &user, err
+		return nil, err
 	}
-	return &user, nil
+	return addresses, nil
+}
+
+func (svc *LndhubService) LookupUserByAddr(ctx context.Context, addr string) (*models.Address, error) {
+	var address models.Address
+	// get user by address
+	err := svc.DB.
+		NewSelect().
+		Model(&address).
+		Where("addr = ?", addr).Relation("User").Relation("Asset").Limit(1).Scan(ctx)
+	if err != nil {
+		return &address, err
+	}
+	return &address, nil
 }
 
 // func decodedAddresses(addresses []models.Address) ([]AddressResponse, error) {

@@ -239,7 +239,7 @@ func (svc *LndhubService) CurrentUserBalance(ctx context.Context, assetId string
 func (svc *LndhubService) AccountFor(ctx context.Context, accountType string, assetId string, userId int64) (models.Account, error) {
 	account := models.Account{}
 	// TODO note the hardcoding of asset_id below
-	err := svc.DB.NewSelect().Model(&account).Where("user_id = ? AND ta_asset_id='btc' AND type= ?", userId, accountType).Limit(1).Scan(ctx)
+	err := svc.DB.NewSelect().Model(&account).Where("user_id = ? AND ta_asset_id = ? AND type= ?", userId, assetId, accountType).Limit(1).Scan(ctx)
 	return account, err
 }
 

@@ -41,7 +41,7 @@ func init() {
 					--  (incoming accounts can be negative, so we do not care about those)
 					SELECT INTO debit_account_type type
 					FROM accounts
-					WHERE id = NEW.debit_account_id AND type <> 'incoming'
+					WHERE id = NEW.debit_account_id AND type <> 'incoming' AND ta_asset_id = NEW.ta_asset_id
 					-- IMPORTANT: lock rows but do not wait for another lock to be released.
 					--   Waiting would result in a deadlock because two parallel transactions could try to lock the same rows
 					--   NOWAIT reports an error rather than waiting for the lock to be released
@@ -57,7 +57,7 @@ func init() {
 					-- Calculate the account balance
 					SELECT INTO sum SUM(amount)
 					FROM account_ledgers
-					WHERE account_ledgers.account_id = NEW.debit_account_id;
+					WHERE account_ledgers.account_id = NEW.debit_account_id AND account_ledgers.ta_asset_id = NEW.ta_asset_id;
 
 					-- IF the account would go negative raise an exception
 					IF sum < 0 AND debit_account_type != 'incoming'

@@ -59,7 +59,8 @@ CREATE TABLE accounts (
     CONSTRAINT fk_asset
         FOREIGN KEY(ta_asset_id)
         REFERENCES assets(ta_asset_id)
-        ON DELETE NO ACTION
+        ON DELETE NO ACTION,
+    UNIQUE (user_id, ta_asset_id, type)
 );
 --bun:split
 CREATE TABLE invoices (
@@ -115,7 +116,7 @@ CREATE TABLE transaction_entries (
     user_id bigint NOT NULL,
     invoice_id bigint,
     parent_id bigint,
-    addr character varying,
+    ta_asset_id character varying NOT NULL DEFAULT 'btc',
     credit_account_id bigint NOT NULL,
     debit_account_id bigint NOT NULL,
     amount bigint NOT NULL,
@@ -133,9 +134,9 @@ CREATE TABLE transaction_entries (
         FOREIGN KEY(debit_account_id)
         REFERENCES accounts(id)
         ON DELETE CASCADE,
-    CONSTRAINT fk_addr
-        FOREIGN KEY(addr)
-        REFERENCES addresses(addr)
+    CONSTRAINT fk_ta_asset_id
+        FOREIGN KEY(ta_asset_id)
+        REFERENCES assets(ta_asset_id)
         ON DELETE NO ACTION
 );
 --bun:split

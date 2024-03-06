@@ -10,7 +10,6 @@ require (
 	github.com/SporkHubr/echo-http-cache v0.0.0-20200706100054-1d7ae9f38029
 	github.com/btcsuite/btcd v0.24.1-0.20240123000108-62e6af035ec5
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
-	github.com/btcsuite/btcutil v1.0.2
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/getsentry/sentry-go v0.26.0
 	github.com/go-playground/validator/v10 v10.17.0
@@ -21,8 +20,8 @@ require (
 	github.com/labstack/echo-contrib v0.15.0
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/labstack/gommon v0.4.2
-	github.com/lightninglabs/taproot-assets v0.3.2
-	github.com/lightningnetwork/lnd v0.17.3-beta
+	github.com/lightninglabs/taproot-assets v0.3.3
+	github.com/lightningnetwork/lnd v0.17.4-beta
 	github.com/nbd-wtf/go-nostr v0.28.3
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/rs/zerolog v1.31.0

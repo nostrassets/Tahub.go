@@ -5,6 +5,7 @@ CREATE VIEW account_ledgers(
 	amount
 ) AS
     SELECT
+		transaction_entries.ta_asset_id,
 		transaction_entries.credit_account_id,
 		transaction_entries.id,
 		transaction_entries.amount
@@ -12,6 +13,7 @@ CREATE VIEW account_ledgers(
 		transaction_entries
 	UNION ALL
 	SELECT
+		transaction_entries.ta_asset_id,
 		transaction_entries.debit_account_id,
 		transaction_entries.id,
 		(0 - transaction_entries.amount)

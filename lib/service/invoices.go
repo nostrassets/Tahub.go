@@ -303,14 +303,14 @@ func (svc *LndhubService) HandleFailedPayment(ctx context.Context, invoice *mode
 	}
 	return err
 }
-func (svc *LndhubService) InsertTapdTransactionEntry(ctx context.Context, userId int64, rcvEvent *taprpc.AssetReceiveCompleteEvent, creditAccount, debitAccount models.Account) (entry models.TransactionEntry, err error) {
+func (svc *LndhubService) InsertTapdTransactionEntry(ctx context.Context, userId int64, rcvEvent *taprpc.AssetReceiveCompleteEvent, creditAccount models.Account, debitAccount models.Account) (entry models.TransactionEntry, err error) {
 	entry = models.TransactionEntry{
 		UserID:          userId,
 		CreditAccountID: creditAccount.ID,
 		DebitAccountID:  debitAccount.ID,
 		Amount:          int64(rcvEvent.Address.Amount),
 		Outpoint: 	     rcvEvent.Outpoint,
-		Addr: 		     rcvEvent.Address.Encoded,
+		TaAssetID: 		 creditAccount.TaAssetID,
 		EntryType:       models.EntryTypeIncoming,
 	}
 
