@@ -19,13 +19,7 @@ type AddressResponse struct {
 
 func (svc *LndhubService) CreateAddress(ctx context.Context, address string, userId uint64, taAssetId string, amt uint64, createAccounts bool) (addr *models.Address, err error) {
 	addrObj := &models.Address{}
-	// encAddr := make([]byte, hex.EncodedLen(len(address)))
-	// // hex encode address for sql length issue
-	// val := hex.Encode(encAddr, []byte(address))
-	// // if wrote 0 bytes, return error
-	// if val == 0 {
-	// 	return nil, err
-	// }
+
 	addrObj.Addr = address
 	addrObj.UserId = userId
 	addrObj.TaAssetID = taAssetId

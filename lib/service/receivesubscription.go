@@ -74,6 +74,7 @@ func (svc *LndhubService) HandleTapdReceiveEvent(ctx context.Context, rcvEvent *
 		}
 		tahubUser := addressObj.User
 		assetId := addressObj.TaAssetID
+		assetName := addressObj.Asset.AssetName
 		svc.Logger.Infof("tahub user found: %s", tahubUser.Pubkey)
 		// decode the asset id
 		// assetId, err := decodeAssetIdBytes(completeEvent.Address)
@@ -123,7 +124,7 @@ func (svc *LndhubService) HandleTapdReceiveEvent(ctx context.Context, rcvEvent *
 				return nil
 			}
 			// create message
-			message := "received: " + completeEvent.Address.Encoded + " " + fmt.Sprint(completeEvent.Address.Amount) + " " + assetId
+			message := "received: " + fmt.Sprint(completeEvent.Address.Amount) + " " + assetName
 			// broadcast the notice to the user
 			_ = svc.SendNip4Notification(ctx, message, tahubUser.Pubkey)
 			return nil

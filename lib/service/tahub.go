@@ -151,50 +151,43 @@ func (svc *LndhubService) FetchOrCreateAssetAddr(ctx context.Context, userId uin
 	amtMatch   := false
 	// fetch all addresses for asset, will attempt to match on amount later
 	addrs, err := svc.FindAddresses(ctx, userId, assetId)
-		
-	// decode assetId for tapd request
-	decoded, err := hex.DecodeString(assetId)
-	if err != nil {
-		// TODO OK Relay-Compatible messages need a central location
-		return "error: failed to parse assetID.", err	
-	}
-	// check db error - the nil check on addr indicates the error was on not found
+	// check db error
 	if err != nil {
 		return "error: failed to check on existing address.", err
 	}
+	// decode assetId for tapd request
+	decoded, err := hex.DecodeString(assetId)
+	if err != nil {
+		return "error: failed to parse assetID.", err	
+	}
 	// addrs is nil - return 
-	if len(addrs) > 0 {
+	if len(addrs) >= 1 {
+		// setting flag to prevent creation of additional accounts for the asset
 		assetMatch = true
 		// attempt to match on amount
 		for _, addr := range addrs {
 			if addr.Amount == amt {
+				// setting flag to prevent creation of any additional receiver resources. address exists for exact amount.
 				amtMatch = true
 				return fmt.Sprintf("address: %s", addr.Addr), nil
 			}
 		}
-		// create an address for the user, where they have an existing account for the asset but not an address
-		// for the amount requested
-		req := taprpc.NewAddrRequest{
-			AssetId: decoded,
-			Amt: amt,
-		}
-		newAddr, err := svc.TapdClient.NewAddress(ctx, &req)
-		if err != nil {
-			// TODO OK Relay-Compatible messages need a central location
-			return "error: failed to create receive address.", err
-		}
-		// save new address to db
-		createNewAccounts := !assetMatch && !amtMatch
-		_, err = svc.CreateAddress(ctx, newAddr.Encoded, userId, assetId, amt, createNewAccounts)
-		if err != nil {
-			// TODO OK Relay-Compatible messages need a central location
-			return "error: failed to save receive address.", err
-		}
-		// return success message
-		return fmt.Sprintf("address: %s", newAddr.Encoded), nil
-	} else {
-		// failed to lookup address
-		// TODO OK Relay-Compatible messages need a central location
-		return "error: failed to lookup address.", nil
 	}
+	// definitely need to create an address, and may also need to create accounts if no addresses are found for the asset (of any amount)
+	req := taprpc.NewAddrRequest{
+		AssetId: decoded,
+		Amt: amt,
+	}
+	newAddr, err := svc.TapdClient.NewAddress(ctx, &req)
+	if err != nil {
+		return "error: tapd failed to create receive address.", err
+	}
+	// determine if new accounts should be created
+	createAccounts := !assetMatch && !amtMatch
+	_, err = svc.CreateAddress(ctx, newAddr.Encoded, userId, assetId, amt, createAccounts)
+	// note the defensive return
+	if err == nil {
+		return fmt.Sprintf("address: %s", newAddr.Encoded), nil
+	} 
+	return "error: failed to create or fetch address.", nil
 }

@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math"
-	"time"
 	"github.com/getAlby/lndhub.go/common"
 	"github.com/getAlby/lndhub.go/db/models"
 	"github.com/getAlby/lndhub.go/lib/responses"
@@ -14,6 +12,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"github.com/uptrace/bun"
+	"math"
+	"time"
 )
 
 func (svc *LndhubService) CreateUser(ctx context.Context, pubkey string) (user *models.User, err error) {
@@ -72,7 +72,6 @@ func (svc *LndhubService) UpdateUser(ctx context.Context, userId int64, pubkey *
 	return user, nil
 }
 
-
 func (svc *LndhubService) FindUser(ctx context.Context, userId int64) (*models.User, error) {
 	var user models.User
 
@@ -117,8 +116,8 @@ func (svc *LndhubService) CheckOutgoingPaymentAllowed(c echo.Context, lnpayReq *
 		if volume > limits.MaxSendVolume {
 			svc.Logger.Errorj(
 				log.JSON{
-					"message": 			"transaction volume exceeded",
-					"lndhub_user_id": 	userId,
+					"message":        "transaction volume exceeded",
+					"lndhub_user_id": userId,
 				},
 			)
 			sentry.CaptureMessage(fmt.Sprintf("transaction volume exceeded for user %d", userId))
@@ -225,6 +224,26 @@ func (svc *LndhubService) CalcFeeLimit(destination string, amount int64) int64 {
 	return limit
 }
 
+func (svc *LndhubService) CurrentUserBalanceByAsset(ctx context.Context, userId int64) (*string, error) {
+	balanceMsg := "balances: "
+	balances := make(map[string]int64)
+	accounts, err := svc.AccountsFor(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	for _, account := range accounts {
+		var balance int64
+		err = svc.DB.NewSelect().Table("account_ledgers").ColumnExpr("sum(account_ledgers.amount) as balance").Where("account_ledgers.account_id = ?", account.ID).Scan(ctx, &balance)
+		if err != nil {
+			return nil, err
+		}
+		balances[account.Type] = balance
+		// append to message
+		balanceMsg = balanceMsg + fmt.Sprintf("%s %d,", account.TaAssetID, balance)
+	}
+	return &balanceMsg, nil
+}
+
 func (svc *LndhubService) CurrentUserBalance(ctx context.Context, assetId string, userId int64) (int64, error) {
 	var balance int64
 
@@ -241,6 +260,12 @@ func (svc *LndhubService) AccountFor(ctx context.Context, accountType string, as
 	// TODO note the hardcoding of asset_id below
 	err := svc.DB.NewSelect().Model(&account).Where("user_id = ? AND ta_asset_id = ? AND type= ?", userId, assetId, accountType).Limit(1).Scan(ctx)
 	return account, err
+}
+
+func (svc *LndhubService) AccountsFor(ctx context.Context, userId int64) ([]models.Account, error) {
+	accounts := []models.Account{}
+	err := svc.DB.NewSelect().Model(&accounts).Where("user_id = ?", userId).Scan(ctx)
+	return accounts, err
 }
 
 func (svc *LndhubService) TransactionEntriesFor(ctx context.Context, userId int64) ([]models.TransactionEntry, error) {

@@ -133,17 +133,15 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 			svc.Logger.Errorf("Failed to authenticate user for get rcv addr.")
 			return svc.RespondToNip4(ctx, "error: failed to authenticate", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		}
-		// * TODO implement the account_ledgers feature once inserting
-		// 	      transfers from receive subscription
-
 		// pull all accounts 
 		// group by assets, total current accounts - outgoing accounts
-		placeholder, success := svc.BalanceByAsset(ctx)
-		if !success {
-			svc.Logger.Errorf("Failed to calculate balances: %s", placeholder)
+		msg, err := svc.CurrentUserBalanceByAsset(ctx, existingUser.ID)
+		if err != nil {
+			svc.Logger.Errorf("Failed to calculate balances: %s", err)
 			return svc.RespondToNip4(ctx, "error: failed to get balances", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		} else {
-			return svc.RespondToNip4(ctx, placeholder, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
+			// create string from balances 
+			return svc.RespondToNip4(ctx, *msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
 		}
 	} else if data[0] == "TAHUB_SEND_ASSET" {
 		// authentication required
