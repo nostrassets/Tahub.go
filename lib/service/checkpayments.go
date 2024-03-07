@@ -40,8 +40,8 @@ func (svc *LndhubService) GetAllPendingTaprootTransfers(ctx context.Context) ([]
 	/// 	   the lightning network - where we can then leverage the invoice workflows.
 	entries := []models.TransactionEntry{}
 	err := svc.DB.NewSelect().Model(&entries).
-		Where("entry_type = 'pending' AND ta_asset_id != 'btc'").
-		Where("created_at >= (now() - interval '2 weeks') ").
+		Where("broadcast_state = 'pending' AND ta_asset_id != 'btc'").
+		//Where("created_at >= (now() - interval '2 weeks') ").
 		Scan(ctx)
 
 	return entries, err

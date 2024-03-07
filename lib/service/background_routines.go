@@ -110,3 +110,18 @@ func (svc *LndhubService) StartPendingPaymentRoutine(ctx context.Context) (err e
 		return svc.CheckPendingOutgoingPayments(ctx, pending)
 	}
 }
+
+func (svc *LndhubService) StartSendSubscription(ctx context.Context) (err error) {
+	if svc.RabbitMQClient != nil {
+		// TODO populate - apply sentry and rabbit mq
+		return errors.New("RabbitMQ not implemented")
+	} else {
+		err = svc.TapdSendSubscription(ctx)
+		if err != nil && err != context.Canceled {
+			// in case of an error in this routine, we want to restart
+			return err
+		}
+
+		return nil
+	}
+}

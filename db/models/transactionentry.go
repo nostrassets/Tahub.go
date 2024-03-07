@@ -28,7 +28,7 @@ type TransactionEntry struct {
 	ParentID        int64             `bun:",nullzero"`
 	Parent          *TransactionEntry `bun:"rel:belongs-to"`
 	TaAssetID       string			  `bun:",nullzero"`
-	Asset		    *Asset            `bun:"rel:belongs-to,join:ta_asset_id="`
+	Asset		    *Asset            `bun:"rel:belongs-to,join:ta_asset_id=ta_asset_id"`
 	CreditAccountID int64             `bun:",notnull"`
 	FeeReserve      *TransactionEntry `bun:"rel:belongs-to"`
 	ServiceFee      *TransactionEntry `bun:"rel:belongs-to"`

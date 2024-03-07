@@ -133,14 +133,7 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 		// TODO OK Relay-Compatible messages need a central location
 		return "error: insufficient funds.", false
 	} else {
-		sendReq := taprpc.SendAssetRequest{
-			TapAddrs: []string{addr},
-		}
-		_, err = svc.TapdClient.SendAsset(ctx, &sendReq)
-		if err != nil {
-			// TODO OK Relay-Compatible messages need a central location
-			return "error: failed to send asset.", false
-		}
+		// insert pending transaction entry
 		debitAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, sendAssetId, int64(userId))
 		if err != nil {
 			svc.Logger.Errorf("Could not find current account user_id:%v", userId)
@@ -155,7 +148,17 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 		if err != nil {
 			// TODO OK Relay-Compatible messages need a central location
 			return "error: failed to create transaction entry. your send was processed but we lost connectivity to our DB. we will reconcile things ASAP.", false
+		}		
+		// send asset so tx is already in db for status updates
+		sendReq := taprpc.SendAssetRequest{
+			TapAddrs: []string{addr},
 		}
+		_, err = svc.TapdClient.SendAsset(ctx, &sendReq)
+		if err != nil {
+			// TODO OK Relay-Compatible messages need a central location
+			return "error: failed to send asset.", false
+		}
+
 		// return success message
 		return "success: asset sent.", true
 	}

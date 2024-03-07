@@ -237,7 +237,7 @@ func (svc *LndhubService) CurrentUserBalanceByAsset(ctx context.Context, userId 
 		if err != nil {
 			return nil, err
 		}
-		balances[account.Type] = balance
+		balances[account.Asset.AssetName] = balance
 		// append to message
 		//balanceMsg = balanceMsg + fmt.Sprintf("%s %d,", account.TaAssetID, balance)
 	}
@@ -250,7 +250,7 @@ func (svc *LndhubService) CurrentUserBalanceForAsset(ctx context.Context, assetI
 	if err != nil {
 		return balance, err
 	}
-	err = svc.DB.NewSelect().Table("account_ledgers").ColumnExpr("sum(account_ledgers.amount) as balance").Where("account_ledgers.account_id = ?", account.ID).Scan(ctx, &balance)
+	err = svc.DB.NewSelect().Table("account_ledgers").ColumnExpr("sum(account_ledgers.amount) as balance").Where("account_ledgers.account_id = ?", account.ID).Where("account_ledgers.ta_asset_id = ?", assetId).Scan(ctx, &balance)
 	return balance, err
 }
 
@@ -267,14 +267,13 @@ func (svc *LndhubService) CurrentUserBalance(ctx context.Context, assetId string
 
 func (svc *LndhubService) AccountFor(ctx context.Context, accountType string, assetId string, userId int64) (models.Account, error) {
 	account := models.Account{}
-	// TODO note the hardcoding of asset_id below
-	err := svc.DB.NewSelect().Model(&account).Where("user_id = ? AND ta_asset_id = ? AND type= ?", userId, assetId, accountType).Limit(1).Scan(ctx)
+	err := svc.DB.NewSelect().Model(&account).Where("user_id = ? AND account.ta_asset_id = ? AND type= ?", userId, assetId, accountType).Relation("Asset").Limit(1).Scan(ctx)
 	return account, err
 }
 
 func (svc *LndhubService) AccountsFor(ctx context.Context, accountType string, userId int64) ([]models.Account, error) {
 	accounts := []models.Account{}
-	err := svc.DB.NewSelect().Model(&accounts).Where("user_id = ? AND type = ?", userId, accountType).Scan(ctx)
+	err := svc.DB.NewSelect().Model(&accounts).Where("user_id = ? AND type = ?", userId, accountType).Relation("Asset").Scan(ctx)
 	return accounts, err
 }
 
