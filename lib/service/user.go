@@ -227,7 +227,7 @@ func (svc *LndhubService) CalcFeeLimit(destination string, amount int64) int64 {
 func (svc *LndhubService) CurrentUserBalanceByAsset(ctx context.Context, userId int64) (*string, error) {
 	balanceMsg := "balances: "
 	balances := make(map[string]int64)
-	accounts, err := svc.AccountsFor(ctx, userId)
+	accounts, err := svc.AccountsFor(ctx, common.AccountTypeCurrent, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -262,9 +262,9 @@ func (svc *LndhubService) AccountFor(ctx context.Context, accountType string, as
 	return account, err
 }
 
-func (svc *LndhubService) AccountsFor(ctx context.Context, userId int64) ([]models.Account, error) {
+func (svc *LndhubService) AccountsFor(ctx context.Context, accountType string, userId int64) ([]models.Account, error) {
 	accounts := []models.Account{}
-	err := svc.DB.NewSelect().Model(&accounts).Where("user_id = ?", userId).Scan(ctx)
+	err := svc.DB.NewSelect().Model(&accounts).Where("user_id = ? AND type = ?", userId, accountType).Scan(ctx)
 	return accounts, err
 }
 
