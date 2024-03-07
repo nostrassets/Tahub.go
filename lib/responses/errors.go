@@ -112,6 +112,13 @@ var AccountDeactivatedError = ErrorResponse{
 	HttpStatusCode: 401,
 }
 
+var NoBytesWrittenError = ErrorResponse{
+	Error:          true,
+	Code:           2,
+	Message:        "no bytes written",
+	HttpStatusCode: 500,
+}
+
 var UnimplementedError = ErrorResponse{
 	Error: true,
 	Code: 999,

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	//"time"
@@ -41,7 +42,6 @@ func (svc *LndhubService) StartRelayRoutine(ctx context.Context, uri string, las
 
 	go func() {
 		<-sub.EndOfStoredEvents
-		// TODO consider this spot for inerting
 		// last seen filter
 		cancel()
 	}()
@@ -61,6 +61,22 @@ func (svc *LndhubService) StartRelayRoutine(ctx context.Context, uri string, las
 	// TODO do we need to call r.close() on the relay connection
 	// 		or leave open for the subscription?
 	return nil
+}
+
+func (svc *LndhubService) StartReceiveSubscription(ctx context.Context) (err error) {
+	// TODO what is the proper way to not have a timeout on the context?
+	if svc.RabbitMQClient != nil {
+		// TODO populate - apply sentry and rabbit mq
+		return errors.New("RabbitMQ not implemented")
+	} else {
+		err = svc.TapdReceiveSubscription(ctx)
+		if err != nil && err != context.Canceled {
+			// in case of an error in this routine, we want to restart
+			return err
+		}
+
+		return nil
+	}
 }
 
 func (svc *LndhubService) StartInvoiceRoutine(ctx context.Context) (err error) {
@@ -92,5 +108,20 @@ func (svc *LndhubService) StartPendingPaymentRoutine(ctx context.Context) (err e
 		}
 		svc.Logger.Infof("Found %d pending payments", len(pending))
 		return svc.CheckPendingOutgoingPayments(ctx, pending)
+	}
+}
+
+func (svc *LndhubService) StartSendSubscription(ctx context.Context) (err error) {
+	if svc.RabbitMQClient != nil {
+		// TODO populate - apply sentry and rabbit mq
+		return errors.New("RabbitMQ not implemented")
+	} else {
+		err = svc.TapdSendSubscription(ctx)
+		if err != nil && err != context.Canceled {
+			// in case of an error in this routine, we want to restart
+			return err
+		}
+
+		return nil
 	}
 }

@@ -8,11 +8,10 @@ CREATE TABLE relays (
 --bun:split
 INSERT INTO relays(id, uri, relay_name) SELECT 1, 'wss://dev-relay.nostrassets.com', 'internal-dev' WHERE NOT EXISTS (SELECT id FROM relays WHERE id = 1);
 --bun:split
-INSERT INTO relays(id, uri, relay_name) SELECT 2, 'wss://relay.damus.io', 'damus' WHERE NOT EXISTS (SELECT id FROM relays WHERE id = 2);
---bun:split
+
 CREATE TABLE filters (
     relay_id bigint PRIMARY KEY,
-    last_event_seen bigint,
+    last_event_seen bigint DEFAULT extract(epoch from now()) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone,
     CONSTRAINT fk_relay
@@ -21,9 +20,7 @@ CREATE TABLE filters (
         ON DELETE CASCADE
 );
 --bun:split
-INSERT INTO filters(relay_id, last_event_seen) SELECT 1, 1708201481 WHERE NOT EXISTS (SELECT relay_id FROM filters WHERE relay_id = 1);
---bun:split
-INSERT INTO filters(relay_id, last_event_seen) SELECT 2, 1708201481 WHERE NOT EXISTS (SELECT relay_id FROM filters WHERE relay_id = 2);
+INSERT INTO filters(relay_id) SELECT 1 WHERE NOT EXISTS (SELECT relay_id FROM filters WHERE relay_id = 1);
 --bun:split
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -43,36 +40,34 @@ CREATE TABLE events (
 --bun:split
 CREATE TABLE assets (
     id SERIAL PRIMARY KEY,
-    ta_asset_id character varying NOT NULL,
-    asset_name character varying NOT NULL,
+    ta_asset_id character varying NOT NULL UNIQUE,
+    asset_name character varying NOT NULL UNIQUE,
     asset_type int DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone
 );
 --bun:split
-INSERT INTO assets(id, ta_asset_id, asset_name) SELECT 1, 'BTC', 'bitcoin' WHERE NOT EXISTS (SELECT id FROM assets WHERE id = 1);
---bun:split
-
 CREATE TABLE accounts (
     id SERIAL PRIMARY KEY,
     user_id bigint NOT NULL,
-    asset_id bigint NOT NULL,
+    ta_asset_id character varying NOT NULL,
     type character varying NOT NULL,
     CONSTRAINT fk_user
         FOREIGN KEY(user_id)
         REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_asset
-        FOREIGN KEY(asset_id)
-        REFERENCES assets(id)
-        ON DELETE NO ACTION
+        FOREIGN KEY(ta_asset_id)
+        REFERENCES assets(ta_asset_id)
+        ON DELETE NO ACTION,
+    UNIQUE (user_id, ta_asset_id, type)
 );
 --bun:split
 CREATE TABLE invoices (
     id SERIAL PRIMARY KEY,
     type character varying,
     user_id bigint,
-    asset_id bigint,
+    ta_asset_id character varying NOT NULL,
     amount bigint,
     memo character varying,
     description_hash character varying,
@@ -93,19 +88,40 @@ CREATE TABLE invoices (
         REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_asset
-        FOREIGN KEY(asset_id)
-        REFERENCES assets(id)
+        FOREIGN KEY(ta_asset_id)
+        REFERENCES assets(ta_asset_id)
+        ON DELETE NO ACTION
+);
+--bun:split
+CREATE TABLE addresses (
+    id SERIAL PRIMARY KEY,
+    user_id bigint NOT NULL,
+    ta_asset_id character varying NOT NULL,
+    amount bigint,
+    addr character varying NOT NULL UNIQUE,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone,
+    CONSTRAINT fk_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_asset
+        FOREIGN KEY(ta_asset_id)
+        REFERENCES assets(ta_asset_id)
         ON DELETE NO ACTION
 );
 --bun:split
 CREATE TABLE transaction_entries (
     id SERIAL PRIMARY KEY,
     user_id bigint NOT NULL,
-    invoice_id bigint NOT NULL,
+    invoice_id bigint,
     parent_id bigint,
+    ta_asset_id character varying NOT NULL DEFAULT 'btc',
     credit_account_id bigint NOT NULL,
     debit_account_id bigint NOT NULL,
     amount bigint NOT NULL,
+    outpoint character varying,
+    broadcast_state character varying,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT fk_user
         FOREIGN KEY(user_id)
@@ -118,5 +134,10 @@ CREATE TABLE transaction_entries (
     CONSTRAINT fk_debit_account
         FOREIGN KEY(debit_account_id)
         REFERENCES accounts(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_ta_asset_id
+        FOREIGN KEY(ta_asset_id)
+        REFERENCES assets(ta_asset_id)
+        ON DELETE NO ACTION
 );
+--bun:split

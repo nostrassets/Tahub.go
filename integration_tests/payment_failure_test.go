@@ -85,7 +85,7 @@ func (suite *PaymentTestErrorsSuite) TestExternalFailingInvoice() {
 	// TODO this may transition to being a bitcoin specific test or, 
 	//		to handle / iterate multiple assets we include in a test environment
 	//		* asset id hard-coded for now
-	assetId := 1 // bitcoin / sats
+	assetId := common.BTC_TA_ASSET_ID // bitcoin / sats
 	//fund user account
 	invoiceResponse := suite.createAddInvoiceReq(userFundingSats, "integration test external payment user", suite.userToken)
 	err := suite.mlnd.mockPaidInvoice(invoiceResponse, 0, false, nil)
@@ -137,10 +137,10 @@ func (suite *PaymentTestErrorsSuite) TestExternalFailingInvoice() {
 	userId := getUserIdFromToken(suite.userToken)
 
 	// verify transaction entries data
-	feeAccount, _ := suite.service.AccountFor(context.Background(), common.AccountTypeFees, int64(assetId), userId)
-	incomingAccount, _ := suite.service.AccountFor(context.Background(), common.AccountTypeIncoming, int64(assetId), userId)
-	outgoingAccount, _ := suite.service.AccountFor(context.Background(), common.AccountTypeOutgoing, int64(assetId), userId)
-	currentAccount, _ := suite.service.AccountFor(context.Background(), common.AccountTypeCurrent, int64(assetId), userId)
+	feeAccount, _ := suite.service.AccountFor(context.Background(), common.AccountTypeFees, assetId, userId)
+	incomingAccount, _ := suite.service.AccountFor(context.Background(), common.AccountTypeIncoming, assetId, userId)
+	outgoingAccount, _ := suite.service.AccountFor(context.Background(), common.AccountTypeOutgoing, assetId, userId)
+	currentAccount, _ := suite.service.AccountFor(context.Background(), common.AccountTypeCurrent, assetId, userId)
 
 	outgoingInvoices, err := invoicesFor(suite.service, userId, common.InvoiceTypeOutgoing)
 	if err != nil {
@@ -159,7 +159,7 @@ func (suite *PaymentTestErrorsSuite) TestExternalFailingInvoice() {
 		fmt.Printf("Error when getting transaction entries %v\n", err.Error())
 	}
 
-	userBalance, err := suite.service.CurrentUserBalance(context.Background(), int64(assetId), userId)
+	userBalance, err := suite.service.CurrentUserBalance(context.Background(), assetId, userId)
 	if err != nil {
 		fmt.Printf("Error when getting balance %v\n", err.Error())
 	}

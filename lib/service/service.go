@@ -1,22 +1,12 @@
 package service
 
 import (
-	//"context"
-	//"crypto/rand"
-	//b64 "encoding/base64"
 	"errors"
 	"fmt"
-
-	//"math/big"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/btcsuite/btcutil/bech32"
-
-	// "github.com/getAlby/lndhub.go/db/models"
-	//"github.com/getAlby/lndhub.go/lib/responses"
-	// "github.com/getAlby/lndhub.go/lib/tokens"
 	"github.com/getAlby/lndhub.go/lnd"
 	"github.com/getAlby/lndhub.go/rabbitmq"
 	"github.com/getAlby/lndhub.go/tapd"
@@ -26,7 +16,6 @@ import (
 	"github.com/nbd-wtf/go-nostr/nip04"
 	"github.com/uptrace/bun"
 	"github.com/ziflex/lecho/v3"
-	//"golang.org/x/crypto/bcrypt"
 )
 
 const alphaNumBytes = random.Alphanumeric
@@ -39,6 +28,7 @@ type LndhubService struct {
 	RabbitMQClient rabbitmq.Client
 	Logger         *lecho.Logger
 	InvoicePubSub  *Pubsub
+	TaprootAssetPubSub *TapdPubsub
 }
 
 func (svc *LndhubService) ParseInt(value interface{}) (int64, error) {
@@ -89,7 +79,8 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 		return true, payload, nil
 	case "TAHUB_GET_UNIVERSE_ASSETS":
 		return true, payload, nil
-
+	case "TAHUB_GET_BALANCES":
+		return true, payload, nil
 	case "TAHUB_GET_RCV_ADDR":
 		// this action must have three parts to the content
 		if len(data) != 3 {
@@ -112,7 +103,7 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 
 	case "TAHUB_SEND_ASSET":
 		// this action must have three parts to the content
-		if len(data) != 3 {
+		if len(data) != 2 {
 			return false, payload, errors.New("Invalid 'Content' for TAHUB_SEND_ASSET.")
 		}
 		// Validate specific fields for TAHUB_SEND_ASSET event
@@ -121,26 +112,23 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 			return false, payload, errors.New("Field 'ADDR' must have a value")
 		}
 		// decode the address (str, bytes, err)
-		_, _, err := bech32.Decode(data[1])
-		if err != nil {
-			return false, payload, err
-		}
+		// _, _, err := bech32.Decode(data[1])
+		// if err != nil {
+		// 	return false, payload, err
+		// }
 		// validate amt to send
-		amt, err := strconv.ParseFloat(data[2], 64)
-		// TODO consider amt thresholds and their implication there
-		if err != nil || amt < 0 {
-			return false, payload, errors.New("Field 'amt' must be a valid number and non-zero")
-		}
-		// validate fee for tx
-		fee, err := strconv.ParseFloat(data[3], 64)
-		// TODO consider fee thresholds, limits, etc. that make sense to validate/apply here
-		if err != nil || fee != 0 {
-			return false, payload, errors.New("Field 'fee' must be a valid number")
-		}
+		// amt, err := strconv.ParseFloat(data[2], 64)
+		// // TODO consider amt thresholds and their implication there
+		// if err != nil || amt < 0 {
+		// 	return false, payload, errors.New("Field 'amt' must be a valid number and non-zero")
+		// }
+		// // validate fee for tx
+		// fee, err := strconv.ParseFloat(data[3], 64)
+		// // TODO consider fee thresholds, limits, etc. that make sense to validate/apply here
+		// if err != nil || fee != 0 {
+		// 	return false, payload, errors.New("Field 'fee' must be a valid number")
+		// }
 
-		return true, payload, nil
-
-	case "TAHUB_GET_BALANCES":
 		return true, payload, nil
 
 	default:
@@ -149,7 +137,7 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 
 }
 
-func (svc *LndhubService) OneAssetInMultiKeysend(arr []int64) bool {
+func (svc *LndhubService) OneAssetInMultiKeysend(arr []string) bool {
 	for i := 1; i < len(arr); i++ {
 		// compare every item to the first positioned item
 		if arr[i] != arr[0] {

@@ -93,6 +93,19 @@ func (svc *LndhubService) SubscribeIncomingOutgoingInvoices() (incoming, outgoin
 	return incomingInvoices, outgoingInvoices, nil
 }
 
+func (svc LndhubService) SubscribeTaprootAssetTransfers() (rcvResponse, sendResponse chan bool, err error) {
+	rcvResponse, _, err = svc.TaprootAssetPubSub.TapdSubscribe(common.TapdReceiveEvent)
+	if err != nil {
+		return nil, nil, err
+	}
+	sendResponse, _, err = svc.TaprootAssetPubSub.TapdSubscribe(common.TapdSendEvent)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return rcvResponse, sendResponse, nil
+}
+
 func (svc *LndhubService) EncodeInvoiceWithUserLogin(ctx context.Context, w io.Writer, invoice models.Invoice) error {
 	user, err := svc.FindUser(ctx, invoice.UserID)
 	if err != nil {

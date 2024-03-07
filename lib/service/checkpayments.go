@@ -33,6 +33,20 @@ func (svc *LndhubService) GetAllPendingPayments(ctx context.Context) ([]models.I
 	err := svc.DB.NewSelect().Model(&payments).Where("state = 'initialized'").Where("type = 'outgoing'").Where("r_hash != ''").Where("created_at >= (now() - interval '2 weeks') ").Scan(ctx)
 	return payments, err
 }
+
+func (svc *LndhubService) GetAllPendingTaprootTransfers(ctx context.Context) ([]models.TransactionEntry, error) {
+	/// * TODO this jams taproot asssets into existing schema where it should have its own space.
+	/// 	   part of the hesitation is the perceived upcoming upgrade to taproot asset protocol to support
+	/// 	   the lightning network - where we can then leverage the invoice workflows.
+	entries := []models.TransactionEntry{}
+	err := svc.DB.NewSelect().Model(&entries).
+		Where("broadcast_state = 'pending' AND ta_asset_id != 'btc'").
+		//Where("created_at >= (now() - interval '2 weeks') ").
+		Scan(ctx)
+
+	return entries, err
+}
+
 func (svc *LndhubService) CheckPendingOutgoingPayments(ctx context.Context, pendingPayments []models.Invoice) (err error) {
 	//call trackoutgoingpaymentstatus for each one
 	var wg sync.WaitGroup

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/getAlby/lndhub.go/common"
 	"github.com/getAlby/lndhub.go/controllers"
 	v2controllers "github.com/getAlby/lndhub.go/controllers_v2"
 	"github.com/getAlby/lndhub.go/lib"
@@ -94,7 +95,7 @@ func (suite *KeySendTestSuite) TestKeysendPayment() {
 	// check that balance was reduced
 	userId := getUserIdFromToken(suite.aliceToken)
 	// TODO hard-code asset id for now
-	aliceBalance, err := suite.service.CurrentUserBalance(context.Background(), 1, userId)
+	aliceBalance, err := suite.service.CurrentUserBalance(context.Background(), common.BTC_TA_ASSET_ID, userId)
 	if err != nil {
 		fmt.Printf("Error when getting balance %v\n", err.Error())
 	}
@@ -157,7 +158,7 @@ func (suite *KeySendTestSuite) TestMultiKeysend() {
 	//check that balance was reduced appropriately
 	userId := getUserIdFromToken(suite.aliceToken)
 	// TODO hard-code asset ID for now
-	aliceBalance, err := suite.service.CurrentUserBalance(context.Background(), 1, userId)
+	aliceBalance, err := suite.service.CurrentUserBalance(context.Background(), common.BTC_TA_ASSET_ID, userId)
 	if err != nil {
 		fmt.Printf("Error when getting balance %v\n", err.Error())
 	}

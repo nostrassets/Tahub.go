@@ -148,6 +148,7 @@ func main() {
 		TapdClient:     tapdClient,
 		Logger:         logger,
 		InvoicePubSub:  service.NewPubsub(),
+		//TaprootAssetPubSub: service.NewTapdPubsub(),
 		RabbitMQClient: rabbitmqClient,
 	}
 
@@ -178,19 +179,31 @@ func main() {
 
 	var backgroundWg sync.WaitGroup
 	backGroundCtx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
-	// Subscribe to LND invoice updates in the background
+	// Subscribe to TAPD process `receive`` updates in the background
 	backgroundWg.Add(1)
 	go func() {
-		err = svc.StartInvoiceRoutine(backGroundCtx)
+		err = svc.StartReceiveSubscription(backGroundCtx)
 		if err != nil {
 			sentry.CaptureException(err)
 			//we want to restart in case of an error here
 			svc.Logger.Fatal(err)
 		}
-		svc.Logger.Info("Invoice routine done")
+		svc.Logger.Info("Tapd Receive routine done")
 		backgroundWg.Done()
 	}()
-	// TODO get relays from DB
+	// Subscribe to LND invoice updates in the background
+	// backgroundWg.Add(1)
+	// go func() {
+	// 	err = svc.StartInvoiceRoutine(backGroundCtx)
+	// 	if err != nil {
+	// 		sentry.CaptureException(err)
+	// 		//we want to restart in case of an error here
+	// 		svc.Logger.Fatal(err)
+	// 	}
+	// 	svc.Logger.Info("Invoice routine done")
+	// 	backgroundWg.Done()
+	// }()
+	// get relays from DB
 	relays, err := svc.GetRelays(backGroundCtx)
 	if err != nil && len(relays) > 0 {
 		sentry.CaptureException(err)
@@ -214,19 +227,31 @@ func main() {
 		}(relay.Uri, relay.Filter.LastEventSeen)
 	}
 	// Check the status of all pending outgoing payments
+	// backgroundWg.Add(1)
+	// go func() {
+	// 	err = svc.StartPendingPaymentRoutine(backGroundCtx)
+	// 	if err != nil {
+	// 		sentry.CaptureException(err)
+	// 		//in case of an error here no restart is necessary
+	// 		svc.Logger.Error(err)
+	// 	}
+
+	// 	svc.Logger.Info("Pending payment check routines done")
+	// 	backgroundWg.Done()
+	// }()
+
+	// subscribe to TAPD process `send` updates in the background 
 	backgroundWg.Add(1)
 	go func() {
-		err = svc.StartPendingPaymentRoutine(backGroundCtx)
+		err = svc.StartSendSubscription(backGroundCtx)
 		if err != nil {
 			sentry.CaptureException(err)
-			//in case of an error here no restart is necessary
-			svc.Logger.Error(err)
+			//we want to restart in case of an error here
+			svc.Logger.Fatal(err)
 		}
-
-		svc.Logger.Info("Pending payment check routines done")
+		svc.Logger.Info("Tapd Send routine done")
 		backgroundWg.Done()
 	}()
-
 	//Start webhook subscription
 	if svc.Config.WebhookUrl != "" {
 		backgroundWg.Add(1)
