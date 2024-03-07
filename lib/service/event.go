@@ -135,14 +135,13 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 		}
 		// pull all accounts 
 		// group by assets, total current accounts - outgoing accounts
-		msg, err := svc.CurrentUserBalanceByAsset(ctx, existingUser.ID)
+		msg, err := svc.GetAllCurrentBalances(ctx, existingUser.ID)
 		if err != nil {
 			svc.Logger.Errorf("Failed to calculate balances: %s", err)
 			return svc.RespondToNip4(ctx, "error: failed to get balances", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
-		} else {
-			// create string from balances 
-			return svc.RespondToNip4(ctx, *msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
-		}
+		} 
+		// create string from balances 
+		return svc.RespondToNip4(ctx,msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
 	} else if data[0] == "TAHUB_SEND_ASSET" {
 		// authentication required
 		existingUser, isAuthenticated := svc.GetUserIfExists(ctx, relayUri, decoded)
@@ -151,13 +150,13 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 			return svc.RespondToNip4(ctx, "error: failed to authenticate", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		}
 		// check balance and send
-		receipt, success := svc.TransferAssets(ctx, uint64(existingUser.ID), data[1])
+		msg, success := svc.TransferAssets(ctx, uint64(existingUser.ID), data[1])
 		if !success {
-			svc.Logger.Errorf("Failed to transfer assets: %s", receipt)
-			return svc.RespondToNip4(ctx, "error: failed to transfer assets", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
+			svc.Logger.Errorf("Failed to transfer assets: %s", msg)
+			return svc.RespondToNip4(ctx, msg, true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		} else {
 			// success subscription will handle the rest
-			return svc.RespondToNip4(ctx, receipt, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
+			return svc.RespondToNip4(ctx, msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
 		}		
 	} else {
 		// catch all - unimplemented

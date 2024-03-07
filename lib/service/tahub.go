@@ -5,6 +5,8 @@ import (
 	b64 "encoding/base64"
 	"encoding/hex"
 	"fmt"
+
+	"github.com/getAlby/lndhub.go/common"
 	"github.com/lightninglabs/taproot-assets/taprpc"
 )
 
@@ -14,11 +16,7 @@ type AssetRoot struct {
 	GroupKey   string `json:"group_key"`  
 }
 
-// TODO most of this logic was moved to the universe_to_assets go migration
-//      abstract that to a utility function
 func (svc *LndhubService) GetUniverseAssets(ctx context.Context) (okMsg string, success bool) {
-	// req := universerpc.AssetRootRequest{}
-	// universeRoots, err := svc.TapdClient.GetUniverseAssets(ctx, &req)
 	universeRoots, err := svc.GetAssets(ctx)
 	if err != nil {
 		// TODO OK Relay-Compatible messages need a central location
@@ -27,31 +25,6 @@ func (svc *LndhubService) GetUniverseAssets(ctx context.Context) (okMsg string, 
 	var okSuccessMsg = "uniassets: "
 	// since there can be two root entries per asset (one for issuance and one for transfer: https://lightning.engineering/api-docs/api/taproot-assets/universe/query-asset-roots#universerpcqueryrootresponse)
 	// the observedAssetIds array helps us return something the user expects to see i.e. joins asset/transfer entry if both exist
-	
-	//var observedAssetIds = []string{}
-
-	// TODO confirm when the key may be the group key hash instead of the assetId
-
-	// for assetId, root := range universeRoots.UniverseRoots {
-	// 	rawAssetId := strings.Split(assetId, "-")[1]
-	// 	seen := slices.Contains(observedAssetIds, rawAssetId)
-
-	// 	if !seen {
-	// 		decoded, err := hex.DecodeString(rawAssetId)
-
-	// 		if err != nil {
-	// 			// TODO OK Relay-Compatible messages need a central location
-	// 			return "error: failed to parse assetID.", false				
-	// 		}
-
-	// 		final := b64.StdEncoding.EncodeToString(decoded)
-
-	// 		appendAsset := fmt.Sprintf("%s %s,", final, root.AssetName)
-	// 		okSuccessMsg = okSuccessMsg + appendAsset
-
-	// 		observedAssetIds = append(observedAssetIds, rawAssetId)
-	// 	}
-	// }
 	for _, asset := range universeRoots {
 		appendAsset := fmt.Sprintf("%s %s,", asset.TaAssetID, asset.AssetName)
 
@@ -59,6 +32,22 @@ func (svc *LndhubService) GetUniverseAssets(ctx context.Context) (okMsg string, 
 	}
 
 	return okSuccessMsg, true
+}
+
+func (svc *LndhubService) GetAllCurrentBalances(ctx context.Context, userId int64) (string, error) {
+	// success message string
+	msg := "balances: "
+	// get balance data
+	balances, err := svc.CurrentUserBalanceByAsset(ctx, userId)
+	if err != nil {
+		return "error: failed to fetch balances.", err
+	}
+	// build success msg
+	for asset, balance := range balances {
+		assetMsg := fmt.Sprintf("%s - %d,", asset, balance)
+		msg = msg + assetMsg
+	}
+	return msg, nil
 }
 
 func  (svc *LndhubService) BalanceByAsset(ctx context.Context) (okMsg string, success bool) {
@@ -116,34 +105,60 @@ func (svc *LndhubService) GetAddressByAssetId(ctx context.Context, assetId strin
 }
 
 func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, addr string) (string, bool) {
+	// has funding flag
+	hasFunding := false
 	// decode addr
 	req := taprpc.DecodeAddrRequest{Addr: addr}
-	_, err := svc.TapdClient.GetDecodedAddress(ctx, &req)
+	decodedAddr, err := svc.TapdClient.GetDecodedAddress(ctx, &req)
 	if err != nil {
-		// TODO OK Relay-Compatible messages need a central location
 		return "error: failed to decode address.", false
 	}
-	// check amount
-	// TODO implement once receiver subscription is inserting transaction entries
-	var hasFunding = true
-	//sendAmt := decodedAddr.Amount
-	//sendAssetId := hex.EncodeToString(decodedAddr.AssetId)
+	sendAmt := decodedAddr.Amount
+	sendAssetId := hex.EncodeToString(decodedAddr.AssetId)
+	// pull balance for asset - TODO fix this awkward conversion on type mismatch
+	balance, err := svc.CurrentUserBalanceForAsset(ctx, sendAssetId, int64(userId))
+	if err != nil {
+		// TODO OK Relay-Compatible messages need a central location
+		return "error: failed to read balance for asset, ensure you own the asset.", false
+	}
+	// TODO estimate fee rate
+	fee := 1
+	// TODO apply GetLimits on various configurable limits (see User service for original lndhub reference)
+	totalLimits := 1
+	// TODO apply service fee
+	serviceFee := 1
+	// compare current account to send request and limits
+	hasFunding = uint64(balance) >= sendAmt + uint64(fee) + uint64(totalLimits) + uint64(serviceFee)
 	if !hasFunding {
 		// TODO OK Relay-Compatible messages need a central location
 		return "error: insufficient funds.", false
+	} else {
+		sendReq := taprpc.SendAssetRequest{
+			TapAddrs: []string{addr},
+		}
+		_, err = svc.TapdClient.SendAsset(ctx, &sendReq)
+		if err != nil {
+			// TODO OK Relay-Compatible messages need a central location
+			return "error: failed to send asset.", false
+		}
+		debitAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, sendAssetId, int64(userId))
+		if err != nil {
+			svc.Logger.Errorf("Could not find current account user_id:%v", userId)
+			return "error: failed to find debit account for send", false
+		}
+		creditAccount, err := svc.AccountFor(ctx, common.AccountTypeOutgoing, sendAssetId, int64(userId))
+		if err != nil {
+			svc.Logger.Errorf("Could not find outgoing account user_id:%v", userId)
+			return "error: failed to find credit account for send", false
+		}
+		_, err = svc.InsertTapdTransactionEntry(ctx, int64(userId), creditAccount, debitAccount, sendAmt)
+		if err != nil {
+			// TODO OK Relay-Compatible messages need a central location
+			return "error: failed to create transaction entry. your send was processed but we lost connectivity to our DB. we will reconcile things ASAP.", false
+		}
+		// return success message
+		return "success: asset sent.", true
 	}
-	// send asset
-	// TODO estimate fee rate
-	sendReq := taprpc.SendAssetRequest{
-		TapAddrs: []string{addr},
-	}
-	_, err = svc.TapdClient.SendAsset(ctx, &sendReq)
-	if err != nil {
-		// TODO OK Relay-Compatible messages need a central location
-		return "error: failed to send asset.", false
-	}
-	// return success message
-	return "success: asset sent.", true
 }
 
 func (svc *LndhubService) FetchOrCreateAssetAddr(ctx context.Context, userId uint64, assetId string, amt uint64) (string, error) {

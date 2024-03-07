@@ -121,6 +121,7 @@ CREATE TABLE transaction_entries (
     debit_account_id bigint NOT NULL,
     amount bigint NOT NULL,
     outpoint character varying,
+    broadcast_state character varying,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT fk_user
         FOREIGN KEY(user_id)

@@ -23,10 +23,15 @@ type TapdClientWrapper interface {
 	GetDecodedAddress(ctx context.Context, req *taprpc.DecodeAddrRequest, options ...grpc.CallOption) (*taprpc.Addr, error)
 	SendAsset(ctx context.Context, req *taprpc.SendAssetRequest, options ...grpc.CallOption) (*taprpc.SendAssetResponse, error)
 	SubscribeReceiveAssetEvent(ctx context.Context, req *taprpc.SubscribeReceiveAssetEventNtfnsRequest, options ...grpc.CallOption) (SubscribeReceiveAssetEventWrapper, error)
+	SubscribeSendAssetEvent(ctx context.Context, req *taprpc.SubscribeSendAssetEventNtfnsRequest, options ...grpc.CallOption) (SubscribeSendAssetEventWrapper, error)
 }
 
 type SubscribeReceiveAssetEventWrapper interface {
 	Recv() (*taprpc.ReceiveAssetEvent, error)
+}
+
+type SubscribeSendAssetEventWrapper interface {
+	Recv() (*taprpc.SendAssetEvent, error)
 }
 
 func InitTAPDClient(c *TapdConfig, logger *lecho.Logger, ctx context.Context) (TapdClientWrapper, error) {

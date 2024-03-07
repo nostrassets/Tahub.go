@@ -11,7 +11,7 @@ import (
 	"github.com/lightninglabs/taproot-assets/taprpc"
 )
 
-var AlreadyProcessedTapdEventError = errors.New("already processed tapd event")
+var AlreadyProcessedTapdReceiveEventError = errors.New("already processed tapd event")
 
 func (svc *LndhubService) ConnectReceiveSubscription(ctx context.Context) (tapd.SubscribeReceiveAssetEventWrapper, error) {
 	// start tapd receive asset subcription
@@ -76,13 +76,7 @@ func (svc *LndhubService) HandleTapdReceiveEvent(ctx context.Context, rcvEvent *
 		assetId := addressObj.TaAssetID
 		assetName := addressObj.Asset.AssetName
 		svc.Logger.Infof("tahub user found: %s", tahubUser.Pubkey)
-		// decode the asset id
-		// assetId, err := decodeAssetIdBytes(completeEvent.Address)
-		// if err != nil {
-		// 	svc.Logger.Error("error decoding asset id")
-		// 	// TODO apply sentry
-		// 	return nil
-		// }
+
 		svc.Logger.Infof("asset id decoded: %s", assetId)
 		// get user incoming account (it will go negative which is acceptable per notes in db migration)
 		// - this will be the debit_account
@@ -109,6 +103,7 @@ func (svc *LndhubService) HandleTapdReceiveEvent(ctx context.Context, rcvEvent *
 			EntryType: models.EntryTypeIncoming,
 			Outpoint: completeEvent.Outpoint,
 			TaAssetID: assetId,
+			BroadcastState: models.BroadcastStateBroadcast,
 		}
 
 		if completeEvent.Timestamp > 0 {

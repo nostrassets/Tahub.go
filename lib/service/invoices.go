@@ -17,7 +17,7 @@ import (
 	"github.com/getAlby/lndhub.go/lnd"
 	"github.com/getsentry/sentry-go"
 	"github.com/lightningnetwork/lnd/lnrpc"
-	"github.com/lightninglabs/taproot-assets/taprpc"
+	//"github.com/lightninglabs/taproot-assets/taprpc"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
 )
@@ -303,15 +303,15 @@ func (svc *LndhubService) HandleFailedPayment(ctx context.Context, invoice *mode
 	}
 	return err
 }
-func (svc *LndhubService) InsertTapdTransactionEntry(ctx context.Context, userId int64, rcvEvent *taprpc.AssetReceiveCompleteEvent, creditAccount models.Account, debitAccount models.Account) (entry models.TransactionEntry, err error) {
+func (svc *LndhubService) InsertTapdTransactionEntry(ctx context.Context, userId int64, creditAccount models.Account, debitAccount models.Account, amt uint64) (entry models.TransactionEntry, err error) {
 	entry = models.TransactionEntry{
 		UserID:          userId,
 		CreditAccountID: creditAccount.ID,
 		DebitAccountID:  debitAccount.ID,
-		Amount:          int64(rcvEvent.Address.Amount),
-		Outpoint: 	     rcvEvent.Outpoint,
+		Amount:          int64(amt),
+		BroadcastState:  models.BroadcastStatePending,
 		TaAssetID: 		 creditAccount.TaAssetID,
-		EntryType:       models.EntryTypeIncoming,
+		EntryType:       models.EntryTypeOutgoing,
 	}
 
 	tx, err := svc.DB.BeginTx(ctx, &sql.TxOptions{})
@@ -331,6 +331,19 @@ func (svc *LndhubService) InsertTapdTransactionEntry(ctx context.Context, userId
 		return entry, err
 	}
 	return entry, err
+}
+
+func (svc *LndhubService) UpdateTapdTransactionEntry(ctx context.Context, pendingTxEntryId int64, assetId string, userId int64, broadcastState string) bool {
+	// TODO need more from : https://lightning.engineering/api-docs/api/taproot-assets/taproot-assets/subscribe-send-asset-event-ntfns#taprpcexecutesendstateevent
+	//		to update on the subscription notification
+	
+	_, err := svc.DB.NewUpdate().
+		Model(&models.TransactionEntry{ID: pendingTxEntryId, TaAssetID: assetId, UserID: userId, BroadcastState: broadcastState}).
+		OmitZero().
+		WherePK().
+		Exec(ctx)
+		
+	return err == nil
 }
 func (svc *LndhubService) InsertTransactionEntry(ctx context.Context, invoice *models.Invoice, creditAccount, debitAccount, feeAccount models.Account) (entry models.TransactionEntry, err error) {
 	entry = models.TransactionEntry{

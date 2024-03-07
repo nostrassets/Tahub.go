@@ -142,3 +142,7 @@ func (wrapper *TAPDWrapper) SendAsset(ctx context.Context, req *taprpc.SendAsset
 func (wrapper *TAPDWrapper) SubscribeReceiveAssetEvent(ctx context.Context, req *taprpc.SubscribeReceiveAssetEventNtfnsRequest, options ...grpc.CallOption) (SubscribeReceiveAssetEventWrapper, error) {
 	return wrapper.client.SubscribeReceiveAssetEventNtfns(ctx, req, options...)
 }
+
+func (wrapper *TAPDWrapper) SubscribeSendAssetEvent(ctx context.Context, req *taprpc.SubscribeSendAssetEventNtfnsRequest, options ...grpc.CallOption) (SubscribeSendAssetEventWrapper, error) {
+	return wrapper.client.SubscribeSendAssetEventNtfns(ctx, req, options...)
+}

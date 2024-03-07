@@ -224,8 +224,8 @@ func (svc *LndhubService) CalcFeeLimit(destination string, amount int64) int64 {
 	return limit
 }
 
-func (svc *LndhubService) CurrentUserBalanceByAsset(ctx context.Context, userId int64) (*string, error) {
-	balanceMsg := "balances: "
+func (svc *LndhubService) CurrentUserBalanceByAsset(ctx context.Context, userId int64) (map[string]int64, error) {
+	//balanceMsg := "balances: "
 	balances := make(map[string]int64)
 	accounts, err := svc.AccountsFor(ctx, common.AccountTypeCurrent, userId)
 	if err != nil {
@@ -239,9 +239,19 @@ func (svc *LndhubService) CurrentUserBalanceByAsset(ctx context.Context, userId 
 		}
 		balances[account.Type] = balance
 		// append to message
-		balanceMsg = balanceMsg + fmt.Sprintf("%s %d,", account.TaAssetID, balance)
+		//balanceMsg = balanceMsg + fmt.Sprintf("%s %d,", account.TaAssetID, balance)
 	}
-	return &balanceMsg, nil
+	return balances, nil
+}
+
+func (svc *LndhubService) CurrentUserBalanceForAsset(ctx context.Context, assetId string, userId int64) (int64, error) {
+	var balance int64
+	account, err := svc.AccountFor(ctx, common.AccountTypeCurrent, assetId, userId)
+	if err != nil {
+		return balance, err
+	}
+	err = svc.DB.NewSelect().Table("account_ledgers").ColumnExpr("sum(account_ledgers.amount) as balance").Where("account_ledgers.account_id = ?", account.ID).Scan(ctx, &balance)
+	return balance, err
 }
 
 func (svc *LndhubService) CurrentUserBalance(ctx context.Context, assetId string, userId int64) (int64, error) {
