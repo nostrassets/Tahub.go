@@ -1,0 +1,34 @@
+version: '3.9'
+name: tahub
+
+volumes:
+  tahub:
+  db:
+
+services:
+
+  db:
+    image: postgres:14-alpine
+    restart: 'always'
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+    env_file:
+      - ./.env
+
+  tahub:
+    image: tahub
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - tahub:/app
+    env_file:
+      - ./.env
+    expose:
+      - 3000
+    depends_on:
+      - db
+    restart: 'always'
+    
