@@ -20,7 +20,7 @@ services:
     volumes:
       - db:/var/lib/postgresql/data
     env_file:
-      - ./.env
+      - .env
     networks:
       - bitcoin
 
@@ -33,7 +33,7 @@ services:
     volumes:
       - tahub:/app
     env_file:
-      - ./.env
+      - .env
     expose:
       - 3000
     depends_on:
