@@ -1,0 +1,44 @@
+version: '3.9'
+name: tahub
+
+volumes:
+  tahub:
+  db:
+
+networks:
+# https://docs.docker.com/compose/networking/#use-a-pre-existing-network
+  bitcoin:
+    # can set to false to use default networking i.e. not assume nodes already running in external docker network (for mainnet)
+    external: ${USE_EXTERNAL_NETWORK:-true}
+
+services:
+  db:
+    image: postgres:14-alpine
+    restart: 'always'
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+    env_file:
+      - ./.env
+    networks:
+      - bitcoin
+
+  tahub:
+    image: tahub
+    hostname: tahub
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - tahub:/app
+    env_file:
+      - ./.env
+    expose:
+      - 3000
+    depends_on:
+      - db
+    restart: 'always'
+    networks:
+      - bitcoin
+    

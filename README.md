@@ -95,6 +95,13 @@ To run the server
 go run cmd/server/main.go
 ```
 
+# With Docker
+Build
+`docker build -t tahub .`
+
+Run
+`docker run tahub`
+
 ### Building
 
 To build an `lndhub` executable, run the following commands:
