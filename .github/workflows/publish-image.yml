@@ -1,0 +1,23 @@
+name: Publish Docker Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    env:
+      REGISTRY: ghcr.io
+      IMAGENAME: "${{ github.repository_owner }}/${{ github.event.repository.name }}"
+    runs-on: ubuntu-latest
+    steps:
+        # checkout codebase
+      - uses: actions/checkout@v4
+      # login, build, and push to ghcr
+      - name: login, build, and push
+        run: |
+          docker login --username ${{ github.repository_owner }} --password ${{ secrets.PAT }} $REGISTRY
+          docker build . -t "${{ env.REGISTRY }}/${{ env.IMAGENAME }}:latest"
+          docker push $REGISTRY/$IMAGENAME:latest
+
