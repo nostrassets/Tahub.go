@@ -19,7 +19,6 @@ RUN go build -o main ./cmd/server
 
 # Start a new, final image to reduce size.
 FROM alpine as final
-COPY .env .
 # Copy the binaries and entrypoint from the builder image.
 COPY --from=builder /build/main /bin/
 #COPY --from=builder /build/invoice-republishing /bin/
