@@ -1,7 +1,9 @@
 name: Docker Image CI 
 
 on:
-  push
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -43,4 +45,3 @@ jobs:
           message: 'CD: Update tahub tag to ${{ steps.build.outputs.tags }}'
           token: ${{ secrets.PAT }}
           workDir: infra
-          
