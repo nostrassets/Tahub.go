@@ -1,0 +1,45 @@
+name: Docker Image CI 
+
+on:
+  push
+
+jobs:
+  build:
+    env:
+      REGISTRY: ghcr.io
+      IMAGENAME: "${{ github.event.repository.name }}"
+    runs-on: ubuntu-latest
+    steps:
+      # checkout codebase
+      - uses: actions/checkout@v4
+      # login, build, and push to ghcr
+      - name: Docker build
+        uses: mr-smithers-excellent/docker-build-push@v5
+        id: build
+        with:
+          image: ${{ env.IMAGENAME }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PAT }}
+          addLatest: true
+      # now use the new image to deploy our instance
+      - name: Checkout deployment repo
+        uses: actions/checkout@v4
+        with:
+          repository: nostrassets/tahub-deployment
+          path: infra
+          token: ${{ secrets.PAT }}
+      # deploy regtest
+      - name: Update regtest environment
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: fjogeleit/yaml-update-action@v0.7.0
+        with:
+          valueFile: 'infra/network/config.yaml'
+          propertyPath: 'tahub.version'
+          value: ${{ steps.build.outputs.tags }}
+          repository: nostrassets/tahub-deployment
+          branch: main
+          createPR: false
+          message: 'CD: Update tahub tag to ${{ steps.build.outputs.tags }}'
+          token: ${{ secrets.PAT }}
+          workDir: infra

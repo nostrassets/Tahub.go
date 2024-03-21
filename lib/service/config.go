@@ -1,8 +1,12 @@
 package service
 
 import (
+	"os"
+	"log"
 	"fmt"
 	"strings"
+	"path/filepath"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -53,6 +57,67 @@ type Config struct {
 	RelayURI                         []string `envconfig:"RELAY_URI" required:"true"`
 	Branding                         BrandingConfig
 }
+
+func (config *Config) LoadEnv() {
+	// try from file
+	envPath, fileErr := findEnvDir()
+	if envPath != "" && fileErr == nil {
+		envErr := godotenv.Load()
+		if envErr != nil {
+			// failed to load .env file
+			log.Printf("failed to load .env file: %v", envErr)
+		}
+	}
+	// try directly from environment, this supports running the docker image with an environment set by docker compose
+	LoadEphemeralEnv()
+	// after the enviroment is loaded we attempt to populate the config struct, which has
+	// required fields as constraints, so if the environment is not set correctly, the program will panic
+}
+
+func LoadEphemeralEnv() {
+	env := make(map[string]string)
+	// read ephemeral environment variables into map
+	for _, envVar := range os.Environ() {
+		pair := strings.Split(envVar, "=")
+		key, val := pair[0], pair[1]
+		// if key is DATABASE_URI, check to see if there were query params
+		if key == "DATABASE_URI" {
+			// if there are query params, add them to the map
+			if strings.Contains(val, "?") {	
+				// add back 'sslmode', '=' and 'disabled'
+				val = val + "=" + pair[2]
+			}
+		}
+		// set to environment
+		os.Setenv(key, val)
+		// add to map
+		env[pair[0]] = pair[1]
+	}
+}
+
+func findEnvDir() (string, error) {
+	currentDir , err := os.Getwd()
+	if err != nil {
+		// failed to find root go.mod
+		log.Fatalf("failed to find root go.mod: %v", err)
+		return "", err
+	}
+	for {
+		goModPath := filepath.Join(currentDir, "go.mod")
+		if _, err := os.Stat(goModPath); err == nil {
+			break
+		}
+		parent := filepath.Dir(currentDir)
+		if parent == currentDir {
+			//panic(fmt.Errorf("failed to find .env directory (by go.mod)"))
+			log.Printf("failed to find .env directory (by go.mod)")
+			return "", fmt.Errorf("failed to find .env directory (by go.mod)")
+		}
+		currentDir = parent
+	}
+	return filepath.Join(currentDir, ".env"), nil
+}
+
 type Limits struct {
 	MaxSendVolume     int64
 	MaxSendAmount     int64
