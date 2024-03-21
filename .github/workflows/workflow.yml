@@ -43,3 +43,4 @@ jobs:
           message: 'CD: Update tahub tag to ${{ steps.build.outputs.tags }}'
           token: ${{ secrets.PAT }}
           workDir: infra
+          
