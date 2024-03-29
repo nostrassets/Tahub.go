@@ -27,7 +27,7 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 		svc.Logger.Errorf("Invalid Nostr Event content: %v", err)
 		return svc.RespondToNip4(ctx, "error: invalid event content", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 	}
-	// * TODO move this InsertEvent to end of where the filter is updated
+	// * TODO consider move this InsertEvent to end of where the filter is updated
 	// insert encoded
 	status, err := svc.InsertEvent(ctx, payload)
 	if err != nil || !status {
@@ -105,7 +105,7 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 		return svc.RespondToNip4(ctx, msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
 	} else if data[0] == "TAHUB_GET_RCV_ADDR" {
 		// authentication required
-		existingUser, isAuthenticated := svc.GetUserIfExists(ctx, relayUri, decoded)
+		existingUser, isAuthenticated := svc.GetUserIfExists(ctx, decoded)
 		if existingUser == nil || !isAuthenticated {
 			svc.Logger.Errorf("Failed to authenticate user for get rcv addr.")
 			return svc.RespondToNip4(ctx, "error: failed to authenticate", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
@@ -128,7 +128,7 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 		return svc.RespondToNip4(ctx, msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
 	} else if data[0] == "TAHUB_GET_BALANCES" {
 		// authentication required
-		existingUser, isAuthenticated := svc.GetUserIfExists(ctx, relayUri, decoded)
+		existingUser, isAuthenticated := svc.GetUserIfExists(ctx, decoded)
 		if existingUser == nil || !isAuthenticated {
 			svc.Logger.Errorf("Failed to authenticate user for get rcv addr.")
 			return svc.RespondToNip4(ctx, "error: failed to authenticate", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
@@ -144,7 +144,7 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 		return svc.RespondToNip4(ctx,msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
 	} else if data[0] == "TAHUB_SEND_ASSET" {
 		// authentication required
-		existingUser, isAuthenticated := svc.GetUserIfExists(ctx, relayUri, decoded)
+		existingUser, isAuthenticated := svc.GetUserIfExists(ctx, decoded)
 		if existingUser == nil || !isAuthenticated {
 			svc.Logger.Errorf("Failed to authenticate user for get rcv addr.")
 			return svc.RespondToNip4(ctx, "error: failed to authenticate", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
@@ -292,7 +292,7 @@ func (svc *LndhubService) HandleGetPublicKey() (responses.GetServerPubkeyRespons
 }
 
 // * apply this function to the other protected calls, like getting a rcv address, sending and checking balances
-func (svc *LndhubService) GetUserIfExists(ctx context.Context, relayUri string, event nostr.Event) (user *models.User, isAuthenticated bool) {
+func (svc *LndhubService) GetUserIfExists(ctx context.Context, event nostr.Event) (user *models.User, isAuthenticated bool) {
 		// check if user exists
 		existingUser, err := svc.FindUserByPubkey(ctx, event.PubKey)
 		// check if user was found

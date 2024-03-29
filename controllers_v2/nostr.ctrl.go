@@ -37,12 +37,12 @@ func (controller *NostrController) GetServerPubkey(c echo.Context) error {
 func (controller *NostrController) HandleNostrEvent(c echo.Context) error {
 	// The main nostr event handler
 	var body nostr.Event
-
+	// load request payload, params into nostr.Event struct
 	if err := c.Bind(&body); err != nil {
 		c.Logger().Errorf("Failed to load Nostr Event request body: %v", err)
 		return controller.responder.NostrErrorResponse(c, responses.BadArgumentsError.Message)
 	}
-
+	// potentially redundant validation
 	if err := c.Validate(&body); err != nil {
 		c.Logger().Errorf("Invalid Nostr Event request body: %v", err)
 		return controller.responder.NostrErrorResponse(c, responses.BadArgumentsError.Message)
@@ -52,13 +52,26 @@ func (controller *NostrController) HandleNostrEvent(c echo.Context) error {
 		c.Logger().Errorf("Signature is not valid for the event... Consider monitoring this user if issue persists: %v", err)
 		return controller.responder.NostrErrorResponse(c, responses.BadAuthError.Message)
 	}
-	// TODO add NIP4 decoding here
-
 	// call our payload validator 
 	result, decodedPayload, err := controller.svc.CheckEvent(body)
 	if err != nil || !result {
 		c.Logger().Errorf("Invalid Nostr Event content: %v", err)
 		return controller.responder.NostrErrorResponse(c, responses.InvalidTahubContentError.Message)
+	}
+	// check that this event is not a duplicate, even though it is from the REST API
+	status, err := controller.svc.InsertEvent(c.Request().Context(), body)
+	if err != nil || !status {
+		// * specifically handle duplicate events
+		dupEvent := strings.Contains(err.Error(), "unique constraint")
+		if dupEvent {
+			// * NOTE we are not responding to duplicate events and trusting the filter
+			//   minimizes the workload we have on a given restart
+			c.Logger().Errorf("Duplicate event detected: %v", err)
+			return nil
+		} else {
+			// * likely db connectivity issue, since payload is valid
+			c.Logger().Errorf("Failed to insert event into database: %v", err)
+		}
 	}
 	// Split event content
 	data := strings.Split(decodedPayload.Content, ":")
@@ -67,11 +80,11 @@ func (controller *NostrController) HandleNostrEvent(c echo.Context) error {
 		// TODO determine if a check against config is required
 		// 		in Tahub's case: https://github.com/nostrassets/Tahub.go/blob/a798601f63d5847b045360e45e8090081bb4cd85/lib/transport/v2_endpoints.go#L12
 		// check if user exists
-		existingUser, err := controller.svc.FindUserByPubkey(c.Request().Context(), body.PubKey)
+		existingUser, err := controller.svc.FindUserByPubkey(c.Request().Context(), decodedPayload.PubKey)
 		// check if user was found
 		if existingUser.ID > 0 {
 			c.Logger().Errorf("Cannot create user that has already registered this pubkey")
-			return controller.responder.CreateUserOk(c, body, existingUser.ID, true, "this pubkey has already been registered.")
+			return controller.responder.CreateUserOk(c, decodedPayload, existingUser.ID, true, "this pubkey has already been registered.")
 		}
 		// confirm no error occurred in checking if the user exists
 		if err != nil {
@@ -81,35 +94,42 @@ func (controller *NostrController) HandleNostrEvent(c echo.Context) error {
 				c.Logger().Info("Error is related to no results in the dataset, which is acceptable.")
 			} else {
 				c.Logger().Errorf("Unable to verify the pubkey has not already been registered: %v", err)
-				return controller.responder.CreateUserOk(c, body, 0, true, "failed to check pubkey.")
+				return controller.responder.CreateUserOk(c, decodedPayload, 0, true, "failed to check pubkey.")
 			}
 		}
 		// create the user, by public key
-		user, err := controller.svc.CreateUser(c.Request().Context(), body.PubKey)
+		user, err := controller.svc.CreateUser(c.Request().Context(), decodedPayload.PubKey)
 		if err != nil {
 			// create user error response
 			c.Logger().Errorf("Failed to create user via Nostr event: %v", err)
-			return controller.responder.CreateUserOk(c, body, 0, true, "failed to insert user into database.")
+			return controller.responder.CreateUserOk(c, decodedPayload, 0, true, "failed to insert user into database.")
 		}
 		// create user success response
-		return controller.responder.CreateUserOk(c, body, user.ID, false, "")
+		return controller.responder.CreateUserOk(c, decodedPayload, user.ID, false, "")
 	} else if data[0] == "TAHUB_GET_SERVER_PUBKEY" {
 		// get server npub
 		res, err := controller.HandleGetPublicKey()
 		if err != nil {
 			c.Logger().Errorf("Failed to handle / encode public key: %v", err)
-			return controller.responder.GetServerPubkeyOk(c, body, "", true, responses.NostrServerError.Message)
+			return controller.responder.GetServerPubkeyOk(c, decodedPayload, "", true, responses.NostrServerError.Message)
 		}
 		// return server npub
-		return controller.responder.GetServerPubkeyOk(c, body, res.TahubPubkeyHex, false, "")
+		return controller.responder.GetServerPubkeyOk(c, decodedPayload, res.TahubPubkeyHex, false, "")
 
 	} else if data[0] == "TAHUB_GET_UNIVERSE_ASSETS" {
 		// get universe known assets 
 		msg, status := controller.svc.GetUniverseAssets(c.Request().Context())
-		return controller.responder.GenericOk(c, body, msg, status)
+		// * NOTE status is passed to an isError flag
+		return controller.responder.GenericOk(c, body, msg, !status)
 	} else if data[0] == "TAHUB_GET_RCV_ADDR" {
-		// given an asset_id and amt, return the address
+		// authentication required
+		existingUser, isAuthenticated := controller.svc.GetUserIfExists(c.Request().Context(), decodedPayload)
+		if existingUser == nil || !isAuthenticated {
+			controller.svc.Logger.Errorf("Failed to authenticate user for get rcv addr.")
 
+			return controller.responder.NostrErrorResponse(c, responses.BadAuthError.Message)
+		}
+		// given an asset_id and amt, return the address
 		// these values are prevalidated by CheckEvent
 		assetId := data[1]
 		amt, err := strconv.ParseUint(data[2], 10, 64)
@@ -117,10 +137,50 @@ func (controller *NostrController) HandleNostrEvent(c echo.Context) error {
 			c.Logger().Errorf("Failed to parse amt field in content: %v", err)
 			return controller.responder.NostrErrorResponse(c, responses.GeneralServerError.Message)
 		}
-		msg, status := controller.svc.GetAddressByAssetId(c.Request().Context(), assetId, amt)
+		msg, err := controller.svc.FetchOrCreateAssetAddr(c.Request().Context(), uint64(existingUser.ID), assetId, amt)
+		if err != nil {
+			// set isError status to true for the error response
+			status = true
+			controller.svc.Logger.Errorf("Failed to fetch or create asset address: %v", err)
+			return controller.responder.NostrErrorResponse(c, responses.GeneralServerError.Message)
+		}
+		/// * NOTE status is passed to an isError flag
 		return controller.responder.GenericOk(c, body, msg, status)
+	} else if data[0] == "TAHUB_GET_BALANCES" {
+		// authentication required
+		existingUser, isAuthenticated := controller.svc.GetUserIfExists(c.Request().Context(), decodedPayload)
+		if existingUser == nil || !isAuthenticated {
+			controller.svc.Logger.Errorf("Failed to authenticate user for get balances.")
+			return controller.responder.NostrErrorResponse(c, responses.BadAuthError.Message)
+		}
+		// pull all accounts
+		// group by assets, total current accounts - outgoing accounts
+		msg, err := controller.svc.GetAllCurrentBalances(c.Request().Context(), existingUser.ID)
+		if err != nil {
+			controller.svc.Logger.Errorf("Failed to get all current balances: %v", err)
+			return controller.responder.NostrErrorResponse(c, responses.GeneralServerError.Message)
+		}
+		// respond
+		return controller.responder.GenericOk(c, body, msg, false)
+	} else if data[0] == "TAHUB_SEND_ASSET" {
+		// authentication required
+		existingUser, isAuthenticated := controller.svc.GetUserIfExists(c.Request().Context(), decodedPayload)
+		if existingUser == nil || !isAuthenticated {
+			controller.svc.Logger.Errorf("Failed to authenticate user for send asset.")
+			return controller.responder.NostrErrorResponse(c, responses.BadAuthError.Message)
+		}
+		// check balance and send
+		msg, status := controller.svc.TransferAssets(c.Request().Context(), uint64(existingUser.ID), data[1])
+		if !status {
+			controller.svc.Logger.Errorf("Failed to transfer assets: %v", msg)
+			return controller.responder.NostrErrorResponse(c, responses.GeneralServerError.Message)
+		} else {
+			// success
+			return controller.responder.GenericOk(c, body, msg, false)
+		}
 	} else {
-		// TODO handle next events
+		// catch all - unimplemented
+		controller.svc.Logger.Errorf("Unimplemented Nostr Event content: %v", decodedPayload.Content)
 		return controller.responder.NostrErrorResponse(c, "unimplemented.")
 	}
 }
