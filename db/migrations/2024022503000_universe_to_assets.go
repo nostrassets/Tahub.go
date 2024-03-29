@@ -3,14 +3,11 @@ package migrations
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"log"
-
 	"github.com/getAlby/lndhub.go/db/models"
 	"github.com/getAlby/lndhub.go/lib"
 	"github.com/getAlby/lndhub.go/lib/service"
 	"github.com/getAlby/lndhub.go/tapd"
-	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/lightninglabs/taproot-assets/taprpc/universerpc"
 	"github.com/uptrace/bun"
@@ -22,11 +19,9 @@ func init() {
 		// setup
 		c := &service.Config{}
 		// Load configruation from environment variables
-		err := godotenv.Load(".env")
-		if err != nil {
-			fmt.Println("Failed to load .env file")
-		}
-		err = envconfig.Process("", c)
+		c.LoadEnv()
+
+		err := envconfig.Process("", c)
 		if err != nil {
 			log.Fatalf("Error loading environment variables: %v", err)
 		}

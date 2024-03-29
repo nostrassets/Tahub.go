@@ -34,6 +34,21 @@ func (svc *LndhubService) GetUniverseAssets(ctx context.Context) (okMsg string, 
 	return okSuccessMsg, true
 }
 
+func (svc *LndhubService) GetUniverseAssetsJson(ctx context.Context) (map[string]string, error) {
+	// asset map
+	assetMap := make(map[string]string)	
+	// get asset data
+	assets, err := svc.GetAssets(ctx)
+	if err != nil {
+		return assetMap, err
+	}
+	// build success msg
+	for _, asset := range assets {
+		assetMap[asset.TaAssetID] = asset.AssetName
+	}
+	return assetMap, nil
+}
+
 func (svc *LndhubService) GetAllCurrentBalances(ctx context.Context, userId int64) (string, error) {
 	// success message string
 	msg := "balances: "
@@ -48,6 +63,21 @@ func (svc *LndhubService) GetAllCurrentBalances(ctx context.Context, userId int6
 		msg = msg + assetMsg
 	}
 	return msg, nil
+}
+
+func (svc*LndhubService) GetAllCurrentBalancesJson(ctx context.Context, userId int64) (map[string]int64, error) {
+	// balance map
+	balanceMap := make(map[string]int64)
+	// get balance data
+	balances, err := svc.CurrentUserBalanceByAsset(ctx, userId)
+	if err != nil {
+		return balanceMap, err
+	}
+	// build success msg
+	for asset, balance := range balances {
+		balanceMap[asset] = balance
+	}
+	return balanceMap, nil
 }
 
 func  (svc *LndhubService) BalanceByAsset(ctx context.Context) (okMsg string, success bool) {
@@ -158,9 +188,9 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 			// TODO OK Relay-Compatible messages need a central location
 			return "error: failed to send asset.", false
 		}
-
 		// return success message
-		return "success: asset sent.", true
+		msg := fmt.Sprintf("success: sent %s", sendAssetId)
+		return msg, true
 	}
 }
 
