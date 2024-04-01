@@ -116,6 +116,8 @@ To run your own local lightning network and LND you can use [Lightning Polar](ht
 
 Alternatively you can also use the [Alby simnetwork](https://github.com/getAlby/lightning-browser-extension/wiki/Test-setup)
 
+# Swagger Docs
+`swag init --dir ./cmd/server,./lib/responses,./controllers_v2`
 
 ## Database
 
