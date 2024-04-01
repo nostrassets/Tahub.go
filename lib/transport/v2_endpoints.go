@@ -8,8 +8,9 @@ import (
 // TODO for the purpose of Tahub it is worth considering trimming/refactoring this
 //		to be for Admin endpoints only.
 func RegisterV2Endpoints(svc *service.LndhubService, e *echo.Echo, secured *echo.Group, securedWithStrictRateLimit *echo.Group, strictRateLimitMiddleware echo.MiddlewareFunc, adminMw echo.MiddlewareFunc, logMw echo.MiddlewareFunc) {
-	// TODO: v2 auth endpoint: generalized oauth token generation
-	// e.POST("/auth", controllers.NewAuthController(svc).Auth)
+	// since tahub users register by pubkey, v2 auth returns tokens if a message
+	// is signed by the pubkey of our user to the server pubkey
+	e.POST("/v2/auth", v2controllers.NewPubkeyAuthController(svc).Auth, strictRateLimitMiddleware, logMw)
 	if svc.Config.AllowAccountCreation {
 		/// TAHUB_CREATE_USER / N.S. register modified endpoint
 		e.POST("/v2/users", v2controllers.NewCreateUserController(svc).CreateUser, strictRateLimitMiddleware, adminMw, logMw)
@@ -21,7 +22,7 @@ func RegisterV2Endpoints(svc *service.LndhubService, e *echo.Echo, secured *echo
 	invoiceCtrl := v2controllers.NewInvoiceController(svc)
 	keysendCtrl := v2controllers.NewKeySendController(svc)
 	nostrEventCtrl := v2controllers.NewNostrController(svc)
-
+	// TODO determine if REST API should be single endpoint or multiple (one per action)
 	// add the endpoint to the group 
 	// NOSTR EVENT Request
 	e.POST("/v2/event", nostrEventCtrl.HandleNostrEvent)

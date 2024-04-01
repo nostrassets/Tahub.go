@@ -36,6 +36,12 @@ type NostrTransferResponseBody struct {
 type NostrAddressResponseBody struct {
 	Address string `json:"address"`
 }
+/// auth response
+type AuthResponseBody struct {
+	Pubkey       string `json:"pubkey"`
+	RefreshToken string `json:"refresh_token"`
+	AccessToken  string `json:"access_token"`
+}
 
 
 type RelayResponder struct {} 
@@ -99,6 +105,15 @@ func (responder *RelayResponder) GetBalancesJson(c echo.Context, balances map[st
 func (responder *RelayResponder) TransferAssetsJson(c echo.Context, msg string) error {
 	var res NostrTransferResponseBody
 	res.Message = msg
+
+	return c.JSON(http.StatusOK, &res)
+}
+
+func (responder *RelayResponder) AuthJson(c echo.Context, pubkey string, accessToken string, refreshToken string) error {
+	var res AuthResponseBody
+	res.Pubkey = pubkey
+	res.AccessToken = accessToken
+	res.RefreshToken = refreshToken
 
 	return c.JSON(http.StatusOK, &res)
 }
