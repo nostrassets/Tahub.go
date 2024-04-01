@@ -59,3 +59,36 @@ func (controller *BalanceController) Balance(c echo.Context) error {
 		Unit:     "sat",
 	})
 }
+/// get all balances
+type BalancesResponse struct {
+	Balances map[string]int64 `json:"balances"`
+}
+/// Balances godoc
+/// @Summary      Retrieve all balances
+/// @Description  Retrieve all user balances
+/// @Accept       json
+/// @Produce      json
+/// @Tags         Account
+/// @Success      200  {object}  BalancesResponse
+/// @Failure      400  {object}  responses.ErrorResponse
+/// @Failure      500  {object}  responses.ErrorResponse
+/// @Router       /v2/balances/all [get]
+/// @Security     Nip4
+func (controller *BalanceController) Balances(c echo.Context) error {
+	userId := c.Get("UserID").(int64)
+
+	balances, err := controller.svc.GetAllCurrentBalancesJson(c.Request().Context(), userId)
+	if err != nil {
+		c.Logger().Errorj(
+			log.JSON{
+				"message":        "failed to retrieve user balances",
+				"lndhub_user_id": userId,
+				"error":          err,
+			},
+		)
+		return c.JSON(http.StatusBadRequest, responses.BadArgumentsError)
+	}
+	return c.JSON(http.StatusOK, &BalancesResponse{
+		Balances: balances,
+	})
+}
