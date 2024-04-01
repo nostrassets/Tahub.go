@@ -7,7 +7,7 @@ import (
 	"github.com/getAlby/lndhub.go/lib/service"
 	"github.com/labstack/echo/v4"
 )
-
+// PubkeyAuthController : PubkeyAuthController struct
 type PubkeyAuthController struct {
 	svc *service.LndhubService
 	responder responses.RelayResponder
@@ -28,7 +28,7 @@ type AuthResponseBody struct {
 	RefreshToken string `json:"refresh_token"`
 	AccessToken  string `json:"access_token"`
 }
-/// Pubkey Authentication godoc
+/// PubkeyAuthentication godoc
 /// @Summary      Authenticate by pubkey
 /// @Description  Authenticate by pubkey
 /// @Accept       json
@@ -38,7 +38,6 @@ type AuthResponseBody struct {
 /// @Failure      400  {object}  responses.ErrorResponse
 /// @Failure      500  {object}  responses.ErrorResponse
 /// @Router       /v2/auth [post]
-/// @Security     NIP-4
 func (controller *PubkeyAuthController) Auth(c echo.Context) error {
 	// payload is an event
 	var body AuthRequestBody

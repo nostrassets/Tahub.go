@@ -6,7 +6,7 @@ import (
 	"github.com/getAlby/lndhub.go/lib/service"
 	"github.com/labstack/echo/v4"
 )
-
+// UniverseController : UniverseController struct
 type UniverseController struct {
 	svc *service.LndhubService
 	responder responses.RelayResponder

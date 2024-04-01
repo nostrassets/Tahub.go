@@ -29,7 +29,7 @@ type AddressResponseBody struct {
 	Address string `json:"address"`
 }
 
-/// get or create address godoc
+/// Address godoc
 // @Summary      Get or create address
 // @Description  Get or create address for deposit
 // @Accept       json
@@ -39,8 +39,7 @@ type AddressResponseBody struct {
 // @Success      200      {object}  AddressResponseBody
 // @Failure      400      {object}  responses.ErrorResponse
 // @Failure      500      {object}  responses.ErrorResponse
-// @Router       /v2/address [post]
-// @Security     NIP 4
+// @Router       /v2/create-address [post]
 func (controller *AddressController) CreateAddress(c echo.Context) error {
 	userId := c.Get("UserID").(uint64)
 	// payload is an event

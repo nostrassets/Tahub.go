@@ -41,10 +41,10 @@ import (
 // @license.name  GNU GPLv3
 // @license.url   https://www.gnu.org/licenses/gpl-3.0.en.html
 
-// @BasePath  /
+// @BasePath  /v2
 
 // @securitydefinitions.oauth2.password  OAuth2Password
-// @tokenUrl                             /auth
+// @tokenUrl                             /v2/auth
 // @schemes                              https http
 func main() {
 	c := &service.Config{}

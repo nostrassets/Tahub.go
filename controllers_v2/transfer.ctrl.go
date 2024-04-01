@@ -6,7 +6,7 @@ import (
 	"github.com/getAlby/lndhub.go/lib/service"
 	"github.com/labstack/echo/v4"
 )
-
+// TransferController : TransferController struct
 type TransferController struct {
 	svc *service.LndhubService
 	responder responses.RelayResponder
@@ -35,7 +35,6 @@ type TransferResponseBody struct {
 // @Failure      400      {object}  responses.ErrorResponse
 // @Failure      500      {object}  responses.ErrorResponse
 // @Router       /v2/transfer [post]
-// @Security     NIP 4
 
 func (controller *TransferController) Transfer(c echo.Context) error {
 	userId := c.Get("UserID").(uint64)

@@ -14,53 +14,8 @@
         },
         "version": "0.9.0"
     },
-    "basePath": "/",
+    "basePath": "/v2",
     "paths": {
-        "/auth": {
-            "post": {
-                "description": "Exchanges a login + password for a token",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Account"
-                ],
-                "summary": "Authenticate",
-                "parameters": [
-                    {
-                        "description": "Login and password",
-                        "name": "AuthRequestBody",
-                        "in": "body",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.AuthRequestBody"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/controllers.AuthResponseBody"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/responses.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/v2/admin/users": {
             "put": {
                 "description": "Update an account with a new a login, password and activation status. Requires Authorization header with admin token.",
@@ -106,7 +61,42 @@
                 }
             }
         },
-        "/v2/balance": {
+        "/v2/auth": {
+            "post": {
+                "description": "Authenticate by pubkey",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Authenticate by pubkey",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v2controllers.AuthResponseBody"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/balance/:asset_id": {
             "get": {
                 "security": [
                     {
@@ -129,6 +119,65 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/v2controllers.BalanceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/balances/all": {
+            "get": {
+                "description": "Retrieve all user balances",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Retrieve all balances",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v2controllers.BalancesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/create-address": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v2controllers.AddressResponseBody"
                         }
                     },
                     "400": {
@@ -485,9 +534,44 @@
                 }
             }
         },
+        "/v2/universe-assets": {
+            "get": {
+                "description": "Retrieve universe assets",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Universe"
+                ],
+                "summary": "Retrieve universe assets",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v2controllers.UniverseAssetsResponseBody"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v2/users": {
             "post": {
-                "description": "Create a new account with a login and password",
+                "description": "Create a new account with a pubkey and password",
                 "consumes": [
                     "application/json"
                 ],
@@ -532,31 +616,6 @@
         }
     },
     "definitions": {
-        "controllers.AuthRequestBody": {
-            "type": "object",
-            "properties": {
-                "login": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "refresh_token": {
-                    "type": "string"
-                }
-            }
-        },
-        "controllers.AuthResponseBody": {
-            "type": "object",
-            "properties": {
-                "access_token": {
-                    "type": "string"
-                },
-                "refresh_token": {
-                    "type": "string"
-                }
-            }
-        },
         "responses.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -583,12 +642,18 @@
                 },
                 "description_hash": {
                     "type": "string"
+                },
+                "ta_asset_id": {
+                    "type": "string"
                 }
             }
         },
         "v2controllers.AddInvoiceResponseBody": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "expires_at": {
                     "type": "string"
                 },
@@ -596,6 +661,31 @@
                     "type": "string"
                 },
                 "payment_request": {
+                    "type": "string"
+                },
+                "ta_asset_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "v2controllers.AddressResponseBody": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                }
+            }
+        },
+        "v2controllers.AuthResponseBody": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "pubkey": {
+                    "type": "string"
+                },
+                "refresh_token": {
                     "type": "string"
                 }
             }
@@ -614,13 +704,21 @@
                 }
             }
         },
+        "v2controllers.BalancesResponse": {
+            "type": "object",
+            "properties": {
+                "balances": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "v2controllers.CreateUserRequestBody": {
             "type": "object",
             "properties": {
-                "login": {
-                    "type": "string"
-                },
-                "password": {
+                "pubkey": {
                     "type": "string"
                 }
             }
@@ -631,10 +729,7 @@
                 "id": {
                     "type": "integer"
                 },
-                "login": {
-                    "type": "string"
-                },
-                "password": {
+                "pubkey": {
                     "type": "string"
                 }
             }
@@ -702,7 +797,8 @@
             "type": "object",
             "required": [
                 "amount",
-                "destination"
+                "destination",
+                "ta_asset_id"
             ],
             "properties": {
                 "amount": {
@@ -725,6 +821,9 @@
                 },
                 "memo": {
                     "type": "string"
+                },
+                "ta_asset_id": {
+                    "type": "string"
                 }
             }
         },
@@ -732,6 +831,9 @@
             "type": "object",
             "properties": {
                 "amount": {
+                    "type": "integer"
+                },
+                "asset_id": {
                     "type": "integer"
                 },
                 "custom_records": {
@@ -805,6 +907,11 @@
                 },
                 "invoice": {
                     "type": "string"
+                },
+                "ta_asset_id": {
+                    "description": "NOTE: this is defaulting to bitcoin balance",
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         },
@@ -834,6 +941,20 @@
                 },
                 "payment_request": {
                     "type": "string"
+                },
+                "ta_asset_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "v2controllers.UniverseAssetsResponseBody": {
+            "type": "object",
+            "properties": {
+                "assets": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -846,13 +967,13 @@
                 "deactivated": {
                     "type": "boolean"
                 },
+                "deleted": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "integer"
                 },
-                "login": {
-                    "type": "string"
-                },
-                "password": {
+                "pubkey": {
                     "type": "string"
                 }
             }
@@ -863,10 +984,13 @@
                 "deactivated": {
                     "type": "boolean"
                 },
+                "deleted": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "integer"
                 },
-                "login": {
+                "pubkey": {
                     "type": "string"
                 }
             }
@@ -876,7 +1000,7 @@
         "OAuth2Password": {
             "type": "oauth2",
             "flow": "password",
-            "tokenUrl": "/auth"
+            "tokenUrl": "/v2/auth"
         }
     }
 }

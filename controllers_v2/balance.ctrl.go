@@ -73,7 +73,6 @@ type BalancesResponse struct {
 /// @Failure      400  {object}  responses.ErrorResponse
 /// @Failure      500  {object}  responses.ErrorResponse
 /// @Router       /v2/balances/all [get]
-/// @Security     Nip4
 func (controller *BalanceController) Balances(c echo.Context) error {
 	userId := c.Get("UserID").(int64)
 
