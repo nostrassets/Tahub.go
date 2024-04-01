@@ -104,6 +104,20 @@ func (controller *NostrController) HandleNostrEvent(c echo.Context) error {
 		}
 		// create user success response
 		return controller.responder.CreateUserJson(c, user.ID)
+	} else if data[0] == "TAHUB_AUTH" {
+		// authentication required
+		existingUser, isAuthenticated := controller.svc.GetUserIfExists(c.Request().Context(), decodedPayload)
+		if existingUser == nil || !isAuthenticated {
+			controller.svc.Logger.Errorf("Failed to authenticate user for get rcv addr.")
+
+			return controller.responder.NostrErrorJson(c, responses.BadAuthError.Message)
+		}
+		// create table with optional relationship for access_token and refresh_token
+
+		// assign access_token and refresh_token to user
+		
+		// return access_token and refresh_token in Responder method
+		return nil
 	} else if data[0] == "TAHUB_GET_SERVER_PUBKEY" {
 		// get server npub
 		res, err := controller.HandleGetPublicKey()

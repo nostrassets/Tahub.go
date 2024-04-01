@@ -1,12 +1,16 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/getAlby/lndhub.go/db/models"
+	"github.com/getAlby/lndhub.go/lib/responses"
+	"github.com/getAlby/lndhub.go/lib/tokens"
 	"github.com/getAlby/lndhub.go/lnd"
 	"github.com/getAlby/lndhub.go/rabbitmq"
 	"github.com/getAlby/lndhub.go/tapd"
@@ -81,6 +85,8 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 		return true, payload, nil
 	case "TAHUB_GET_BALANCES":
 		return true, payload, nil
+	case "TAHUB_AUTH":
+		return true, payload, nil
 	case "TAHUB_GET_RCV_ADDR":
 		// this action must have three parts to the content
 		if len(data) != 3 {
@@ -111,23 +117,6 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 		if data[1] == "" {
 			return false, payload, errors.New("Field 'ADDR' must have a value")
 		}
-		// decode the address (str, bytes, err)
-		// _, _, err := bech32.Decode(data[1])
-		// if err != nil {
-		// 	return false, payload, err
-		// }
-		// validate amt to send
-		// amt, err := strconv.ParseFloat(data[2], 64)
-		// // TODO consider amt thresholds and their implication there
-		// if err != nil || amt < 0 {
-		// 	return false, payload, errors.New("Field 'amt' must be a valid number and non-zero")
-		// }
-		// // validate fee for tx
-		// fee, err := strconv.ParseFloat(data[3], 64)
-		// // TODO consider fee thresholds, limits, etc. that make sense to validate/apply here
-		// if err != nil || fee != 0 {
-		// 	return false, payload, errors.New("Field 'fee' must be a valid number")
-		// }
 
 		return true, payload, nil
 
@@ -135,6 +124,25 @@ func (svc *LndhubService) CheckEvent(payload nostr.Event) (bool, nostr.Event, er
 		return false, payload, errors.New("Undefined 'Content' Name")
 	}
 
+}
+
+func (svc *LndhubService) DecodeNip4Msg(pubKey string, encryptedContent string) (string, error) {
+	// check the length of the content
+	if len(encryptedContent) == 0 {
+		return "", errors.New("Field 'Content' must have a value")
+	}
+	// compute the shared secret
+	sharedSecret, err := nip04.ComputeSharedSecret(pubKey, svc.Config.TahubPrivateKey)
+	if err != nil {
+		return "", errors.New("Failed to compute shared secret for sender.")
+	}
+	// decode content
+	decodedContent, err := nip04.Decrypt(encryptedContent, sharedSecret)
+	if err != nil {
+		return "", errors.New("Failed to decode payload with shared secret")
+	}
+	/// return decoded payload
+	return decodedContent, nil
 }
 
 func (svc *LndhubService) OneAssetInMultiKeysend(arr []string) bool {
@@ -177,52 +185,47 @@ func (svc *LndhubService) ValidateUserMiddleware() echo.MiddlewareFunc {
 	}
 }
 
-// TODO do we need a modified version of this or something new in addition to validating signatures?
 
-// func (svc *LndhubService) GenerateToken(ctx context.Context, login, password, inRefreshToken string) (accessToken, refreshToken string, err error) {
-// 	var user models.User
+func (svc *LndhubService) GenerateToken(ctx context.Context, pubkey string, inRefreshToken string) (accessToken, refreshToken string, err error) {
+	var user models.User
 
-// 	switch {
-// 	// TODO adjust this function to authenticate user with the previously registered pubkey
-// 	//		and the signature on the current event - when required to do so
-// 	case login != "" || password != "":
-// 		{
-// 			if err := svc.DB.NewSelect().Model(&user).Where("login = ?", login).Scan(ctx); err != nil {
-// 				return "", "", fmt.Errorf("bad auth")
-// 			}
-// 			// if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
-// 			// 	return "", "", fmt.Errorf("bad auth")
-// 			// }
-// 		}
-// 	case inRefreshToken != "":
-// 		{
-// 			userId, err := tokens.GetUserIdFromToken(svc.Config.JWTSecret, inRefreshToken)
-// 			if err != nil {
-// 				return "", "", fmt.Errorf("bad auth")
-// 			}
+	switch {
+	// * NOTE this needs to be gated by the authentication ckecks in auth.ctrl or pubkey_auth.ctrl
+	case inRefreshToken == "":
+		{
+			if err := svc.DB.NewSelect().Model(&user).Where("pubkey = ?", pubkey).Scan(ctx); err != nil {
+				return "", "", fmt.Errorf("bad auth")
+			}
+		}
+	case inRefreshToken != "":
+		{
+			userId, err := tokens.GetUserIdFromToken(svc.Config.JWTSecret, inRefreshToken)
+			if err != nil {
+				return "", "", fmt.Errorf("bad auth")
+			}
 
-// 			if err := svc.DB.NewSelect().Model(&user).Where("id = ?", userId).Scan(ctx); err != nil {
-// 				return "", "", fmt.Errorf("bad auth")
-// 			}
-// 		}
-// 	default:
-// 		{
-// 			return "", "", fmt.Errorf("login and password or refresh token is required")
-// 		}
-// 	}
+			if err := svc.DB.NewSelect().Model(&user).Where("id = ?", userId).Scan(ctx); err != nil {
+				return "", "", fmt.Errorf("bad auth")
+			}
+		}
+	default:
+		{
+			return "", "", fmt.Errorf("login and password or refresh token is required")
+		}
+	}
 
-// 	if user.Deactivated || user.Deleted {
-// 		return "", "", fmt.Errorf(responses.AccountDeactivatedError.Message)
-// 	}
+	if user.Deactivated || user.Deleted {
+		return "", "", fmt.Errorf(responses.AccountDeactivatedError.Message)
+	}
 
-// 	accessToken, err = tokens.GenerateAccessToken(svc.Config.JWTSecret, svc.Config.JWTAccessTokenExpiry, &user)
-// 	if err != nil {
-// 		return "", "", err
-// 	}
+	accessToken, err = tokens.GenerateAccessToken(svc.Config.JWTSecret, svc.Config.JWTAccessTokenExpiry, &user)
+	if err != nil {
+		return "", "", err
+	}
 
-// 	refreshToken, err = tokens.GenerateRefreshToken(svc.Config.JWTSecret, svc.Config.JWTRefreshTokenExpiry, &user)
-// 	if err != nil {
-// 		return "", "", err
-// 	}
-// 	return accessToken, refreshToken, nil
-// }
+	refreshToken, err = tokens.GenerateRefreshToken(svc.Config.JWTSecret, svc.Config.JWTRefreshTokenExpiry, &user)
+	if err != nil {
+		return "", "", err
+	}
+	return accessToken, refreshToken, nil
+}

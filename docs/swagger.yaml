@@ -1,21 +1,5 @@
-basePath: /
+basePath: /v2
 definitions:
-  controllers.AuthRequestBody:
-    properties:
-      login:
-        type: string
-      password:
-        type: string
-      refresh_token:
-        type: string
-    type: object
-  controllers.AuthResponseBody:
-    properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
-    type: object
   responses.ErrorResponse:
     properties:
       code:
@@ -34,14 +18,34 @@ definitions:
         type: string
       description_hash:
         type: string
+      ta_asset_id:
+        type: string
     type: object
   v2controllers.AddInvoiceResponseBody:
     properties:
+      created_at:
+        type: string
       expires_at:
         type: string
       payment_hash:
         type: string
       payment_request:
+        type: string
+      ta_asset_id:
+        type: string
+    type: object
+  v2controllers.AddressResponseBody:
+    properties:
+      address:
+        type: string
+    type: object
+  v2controllers.AuthResponseBody:
+    properties:
+      access_token:
+        type: string
+      pubkey:
+        type: string
+      refresh_token:
         type: string
     type: object
   v2controllers.BalanceResponse:
@@ -53,20 +57,23 @@ definitions:
       unit:
         type: string
     type: object
+  v2controllers.BalancesResponse:
+    properties:
+      balances:
+        additionalProperties:
+          type: integer
+        type: object
+    type: object
   v2controllers.CreateUserRequestBody:
     properties:
-      login:
-        type: string
-      password:
+      pubkey:
         type: string
     type: object
   v2controllers.CreateUserResponseBody:
     properties:
       id:
         type: integer
-      login:
-        type: string
-      password:
+      pubkey:
         type: string
     type: object
   v2controllers.Invoice:
@@ -124,13 +131,18 @@ definitions:
         type: string
       memo:
         type: string
+      ta_asset_id:
+        type: string
     required:
     - amount
     - destination
+    - ta_asset_id
     type: object
   v2controllers.KeySendResponseBody:
     properties:
       amount:
+        type: integer
+      asset_id:
         type: integer
       custom_records:
         additionalProperties:
@@ -177,6 +189,10 @@ definitions:
         type: integer
       invoice:
         type: string
+      ta_asset_id:
+        description: 'NOTE: this is defaulting to bitcoin balance'
+        minLength: 1
+        type: string
     required:
     - invoice
     type: object
@@ -198,16 +214,25 @@ definitions:
         type: string
       payment_request:
         type: string
+      ta_asset_id:
+        type: string
+    type: object
+  v2controllers.UniverseAssetsResponseBody:
+    properties:
+      assets:
+        additionalProperties:
+          type: string
+        type: object
     type: object
   v2controllers.UpdateUserRequestBody:
     properties:
       deactivated:
         type: boolean
+      deleted:
+        type: boolean
       id:
         type: integer
-      login:
-        type: string
-      password:
+      pubkey:
         type: string
     required:
     - id
@@ -216,9 +241,11 @@ definitions:
     properties:
       deactivated:
         type: boolean
+      deleted:
+        type: boolean
       id:
         type: integer
-      login:
+      pubkey:
         type: string
     type: object
 info:
@@ -234,35 +261,6 @@ info:
   title: LndHub.go
   version: 0.9.0
 paths:
-  /auth:
-    post:
-      consumes:
-      - application/json
-      description: Exchanges a login + password for a token
-      parameters:
-      - description: Login and password
-        in: body
-        name: AuthRequestBody
-        schema:
-          $ref: '#/definitions/controllers.AuthRequestBody'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/controllers.AuthResponseBody'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/responses.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/responses.ErrorResponse'
-      summary: Authenticate
-      tags:
-      - Account
   /v2/admin/users:
     put:
       consumes:
@@ -293,7 +291,30 @@ paths:
       summary: Update an account
       tags:
       - Account
-  /v2/balance:
+  /v2/auth:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate by pubkey
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v2controllers.AuthResponseBody'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Authenticate by pubkey
+      tags:
+      - Auth
+  /v2/balance/:asset_id:
     get:
       consumes:
       - application/json
@@ -318,6 +339,44 @@ paths:
       summary: Retrieve balance
       tags:
       - Account
+  /v2/balances/all:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all user balances
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v2controllers.BalancesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Retrieve all balances
+      tags:
+      - Account
+  /v2/create-address:
+    post:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v2controllers.AddressResponseBody'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
   /v2/invoices:
     post:
       consumes:
@@ -531,11 +590,34 @@ paths:
       summary: Make multiple keysend payments
       tags:
       - Payment
+  /v2/universe-assets:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve universe assets
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v2controllers.UniverseAssetsResponseBody'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.ErrorResponse'
+      summary: Retrieve universe assets
+      tags:
+      - Universe
   /v2/users:
     post:
       consumes:
       - application/json
-      description: Create a new account with a login and password
+      description: Create a new account with a pubkey and password
       parameters:
       - description: Create User
         in: body
@@ -563,6 +645,6 @@ paths:
 securityDefinitions:
   OAuth2Password:
     flow: password
-    tokenUrl: /auth
+    tokenUrl: /v2/auth
     type: oauth2
 swagger: "2.0"
