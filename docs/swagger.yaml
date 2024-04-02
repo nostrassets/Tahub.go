@@ -296,6 +296,25 @@ paths:
       consumes:
       - application/json
       description: Authenticate by pubkey
+      parameters:
+      - description: Pubkey
+        in: body
+        name: pubkey
+        required: true
+        schema:
+          type: string
+      - description: Content
+        in: body
+        name: content
+        required: true
+        schema:
+          type: string
+      - description: Refresh Token
+        in: body
+        name: refresh_token
+        required: true
+        schema:
+          type: string
       produces:
       - application/json
       responses:
@@ -364,6 +383,24 @@ paths:
       - Account
   /v2/create-address:
     post:
+      consumes:
+      - application/json
+      description: Get or create address for deposit
+      parameters:
+      - description: Asset ID
+        in: body
+        name: asset_id
+        required: true
+        schema:
+          type: string
+      - description: Amount
+        in: body
+        name: amt
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -377,6 +414,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/responses.ErrorResponse'
+      summary: Get or create address
+      tags:
+      - Address
   /v2/invoices:
     post:
       consumes:

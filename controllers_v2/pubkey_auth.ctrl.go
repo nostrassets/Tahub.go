@@ -34,6 +34,9 @@ type AuthResponseBody struct {
 /// @Accept       json
 /// @Produce      json
 /// @Tags         Auth
+/// @Param        pubkey  body  string  true  "Pubkey"
+/// @Param        content  body  string  true  "Content"
+/// @Param        refresh_token  body  string  true  "Refresh Token"
 /// @Success      200  {object}  AuthResponseBody
 /// @Failure      400  {object}  responses.ErrorResponse
 /// @Failure      500  {object}  responses.ErrorResponse
