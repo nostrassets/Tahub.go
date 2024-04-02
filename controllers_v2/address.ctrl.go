@@ -29,13 +29,14 @@ type AddressResponseBody struct {
 	Address string `json:"address"`
 }
 
-/// Address godoc
+// CreateAddress godoc
 // @Summary      Get or create address
 // @Description  Get or create address for deposit
 // @Accept       json
 // @Produce      json
 // @Tags         Address
-
+// @Param        asset_id  body  string  true  "Asset ID"
+// @Param        amt       body  string  true  "Amount"
 // @Success      200      {object}  AddressResponseBody
 // @Failure      400      {object}  responses.ErrorResponse
 // @Failure      500      {object}  responses.ErrorResponse

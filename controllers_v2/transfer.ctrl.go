@@ -30,7 +30,7 @@ type TransferResponseBody struct {
 // @Accept       json
 // @Produce      json
 // @Tags         Transfer
-// @Param        transfer  body      TransferRequestBody  false  "Transfer"
+// @Param        address  body  string  true  "Address"
 // @Success      200      {object}  TransferResponseBody
 // @Failure      400      {object}  responses.ErrorResponse
 // @Failure      500      {object}  responses.ErrorResponse

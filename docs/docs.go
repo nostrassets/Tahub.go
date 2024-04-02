@@ -81,6 +81,35 @@ const docTemplate = `{
                     "Auth"
                 ],
                 "summary": "Authenticate by pubkey",
+                "parameters": [
+                    {
+                        "description": "Pubkey",
+                        "name": "pubkey",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Content",
+                        "name": "content",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Refresh Token",
+                        "name": "refresh_token",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -180,6 +209,37 @@ const docTemplate = `{
         },
         "/v2/create-address": {
             "post": {
+                "description": "Get or create address for deposit",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Address"
+                ],
+                "summary": "Get or create address",
+                "parameters": [
+                    {
+                        "description": "Asset ID",
+                        "name": "asset_id",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Amount",
+                        "name": "amt",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
