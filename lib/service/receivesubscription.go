@@ -121,6 +121,8 @@ func (svc *LndhubService) HandleTapdReceiveEvent(ctx context.Context, rcvEvent *
 			// create message
 			message := "received: " + fmt.Sprint(completeEvent.Address.Amount) + " " + assetName
 			// broadcast the notice to the user
+			
+			// TODO consider how to avoid this call if user did not register through the relay
 			_ = svc.SendNip4Notification(ctx, message, tahubUser.Pubkey)
 			return nil
 		} else {

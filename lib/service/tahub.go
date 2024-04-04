@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/getAlby/lndhub.go/common"
+	"github.com/getAlby/lndhub.go/db/models"
 	"github.com/lightninglabs/taproot-assets/taprpc"
 )
 
@@ -174,23 +175,79 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 			svc.Logger.Errorf("Could not find outgoing account user_id:%v", userId)
 			return "error: failed to find credit account for send", false
 		}
-		_, err = svc.InsertTapdTransactionEntry(ctx, int64(userId), creditAccount, debitAccount, sendAmt)
+		tx, err := svc.InsertTapdTransactionEntry(ctx, int64(userId), creditAccount, debitAccount, sendAmt)
 		if err != nil {
 			// TODO OK Relay-Compatible messages need a central location
 			return "error: failed to create transaction entry. your send was processed but we lost connectivity to our DB. we will reconcile things ASAP.", false
-		}		
-		// send asset so tx is already in db for status updates
-		sendReq := taprpc.SendAssetRequest{
-			TapAddrs: []string{addr},
 		}
-		_, err = svc.TapdClient.SendAsset(ctx, &sendReq)
-		if err != nil {
-			// TODO OK Relay-Compatible messages need a central location
-			return "error: failed to send asset.", false
-		}
-		// return success message
-		msg := fmt.Sprintf("success: sent %s", sendAssetId)
-		return msg, true
+		// determine if this is an internal transfer for tahub
+		// if so, we need to handle it differently
+		rcvAddr, err := svc.FindAddress(ctx, userId, sendAssetId, sendAmt)
+		if err != nil || rcvAddr.Addr == "" {
+			// this is an external transfer
+			// send asset so tx is already in db for status updates
+			sendReq := taprpc.SendAssetRequest{
+				TapAddrs: []string{addr},
+			}
+			_, err = svc.TapdClient.SendAsset(ctx, &sendReq)
+			if err != nil {
+				// TODO OK Relay-Compatible messages need a central location
+				return "error: failed to send asset.", false
+			}
+			// return success message
+			msg := fmt.Sprintf("success: sent %s", sendAssetId)
+			return msg, true
+		} else {
+			// this is an internal transfer
+			rcvUser := rcvAddr.User
+			// get the receiver's debit account / incoming account
+			rcvDebitAccount, err := svc.AccountFor(ctx, common.AccountTypeIncoming, sendAssetId, rcvUser.ID)
+			if err != nil {
+				svc.Logger.Errorf("Could not find incoming account user_id:%v", rcvUser.ID)
+				return "error: failed to find debit account for receive", false
+			}
+			// get the receiver's credit account / current account
+			rcvCreditAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, sendAssetId, rcvUser.ID)
+			if err != nil {
+				svc.Logger.Errorf("Could not find current account user_id:%v", rcvUser.ID)
+				return "error: failed to find credit account for receive", false
+			}
+			// create the transaction entry for the recevier
+			entry := models.TransactionEntry{
+				UserID: rcvUser.ID,
+				DebitAccountID: rcvDebitAccount.ID,
+				CreditAccountID: rcvCreditAccount.ID,
+				Amount: int64(sendAmt),
+				EntryType: models.EntryTypeIncoming,
+				TaAssetID: sendAssetId,
+				Outpoint: models.TahubInternalOutpoint,
+				BroadcastState: models.TahubInternalComplete,
+			}
+			// insert the tx entry
+			_, err = svc.DB.NewInsert().Model(&entry).Exec(ctx)
+			if err != nil {
+				svc.Logger.Error("error inserting transaction entry")
+				// TODO apply sentry
+				return "error: failed to create transaction entry for receive", false
+			}
+			// update the original tx to have a complete status from the sender's perspective
+			updatedTx := svc.UpdateTapdTransactionEntry(
+				ctx,
+				tx.ID,
+				sendAssetId,
+				int64(userId),
+				models.TahubInternalComplete,
+			)
+			// insert the updated tx from sender's perspective
+			_, err = svc.DB.NewInsert().Model(updatedTx).Exec(ctx)
+			if err != nil {
+				svc.Logger.Error("error inserting updated transaction entry")
+				// TODO apply sentry
+				return "error: failed to create transaction entry for send", false
+			}
+			return "success: internal transfer complete", true
+		} 		
+
 	}
 }
 

@@ -16,6 +16,8 @@ const (
 
 	BroadcastStatePending   = "pending"
 	BroadcastStateBroadcast = "broadcast"
+	TahubInternalOutpoint   = "tahub_internal_outpoint"
+	TahubInternalComplete   = "tahub_internal_complete"
 )
 
 // TransactionEntry : Transaction Entries Model
