@@ -144,6 +144,15 @@ func (svc *LndhubService) FindAddressByAddr(ctx context.Context, addr string) (*
 	return &address, nil
 }
 
+func (svc *LndhubService) FindAddressByAddrInTx(ctx context.Context, tx bun.Tx, addr string) (*models.Address, error) {
+	var address models.Address
+	err := tx.NewSelect().Model(&address).Where("addr = ?", addr).Relation("User").Limit(1).Scan(ctx)
+	if err != nil {
+		return &address, err
+	}
+	return &address, nil
+}
+
 func (svc *LndhubService) FindAddresses(ctx context.Context, userId uint64, taAssetId string) ([]models.Address, error) {
 	addresses := []models.Address{}
 	err := svc.DB.NewSelect().Model(&addresses).Where("user_id = ? AND ta_asset_id = ?", userId, taAssetId).Scan(ctx)

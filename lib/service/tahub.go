@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	b64 "encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -164,27 +165,38 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 		// TODO OK Relay-Compatible messages need a central location
 		return "error: insufficient funds.", false
 	} else {
-		
+		// starting database transaction
+		dbTx, err := svc.DB.BeginTx(ctx, &sql.TxOptions{})
+		if err != nil {
+			// TODO OK Relay-Compatible messages need a central location
+			return "error: failed to start transaction.", false
+		}
 		// insert pending transaction entry
-		debitAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, sendAssetId, int64(userId))
+		debitAccount, err := svc.AccountForInTx(ctx, dbTx, common.AccountTypeCurrent, sendAssetId, int64(userId))
 		if err != nil {
 			svc.Logger.Errorf("Could not find current account user_id:%v", userId)
+			// no need to rollback
 			return "error: failed to find debit account for send", false
 		}
-		creditAccount, err := svc.AccountFor(ctx, common.AccountTypeOutgoing, sendAssetId, int64(userId))
+		creditAccount, err := svc.AccountForInTx(ctx, dbTx, common.AccountTypeOutgoing, sendAssetId, int64(userId))
 		if err != nil {
 			svc.Logger.Errorf("Could not find outgoing account user_id:%v", userId)
+			// no need to rollback
 			return "error: failed to find credit account for send", false
 		}
-		tx, err := svc.InsertTapdTransactionEntry(ctx, int64(userId), creditAccount, debitAccount, sendAmt)
+		tx, err := svc.InsertTapdTransactionEntryInTx(ctx, dbTx, int64(userId), creditAccount, debitAccount, sendAmt)
 		if err != nil {
+			// rollback
+			dbTx.Rollback()
 			// TODO OK Relay-Compatible messages need a central location
 			return "error: failed to create transaction entry. your send was processed but we lost connectivity to our DB. we will reconcile things ASAP.", false
 		}
 		// determine if this is an internal transfer for tahub
 		// if so, we need to handle it differently
-		rcvAddr, err := svc.FindAddressByAddr(ctx, addr)
+		rcvAddr, err := svc.FindAddressByAddrInTx(ctx, dbTx, addr)
 		if err != nil {
+			// rollback since we are returning early on error
+			dbTx.Rollback()
 			// TODO OK Relay-Compatible messages need a central location
 			return "error: failed to check on existing address.", false
 		}
@@ -196,6 +208,8 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 			}
 			_, err = svc.TapdClient.SendAsset(ctx, &sendReq)
 			if err != nil {
+				// rollback since we are returning early on error
+				dbTx.Rollback()
 				// TODO OK Relay-Compatible messages need a central location
 				return "error: failed to send asset.", false
 			}
@@ -206,14 +220,18 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 			/// * NOTE this is an internal transfer
 			rcvUser := rcvAddr.User
 			// get the receiver's debit account / incoming account
-			rcvDebitAccount, err := svc.AccountFor(ctx, common.AccountTypeIncoming, sendAssetId, rcvUser.ID)
+			rcvDebitAccount, err := svc.AccountForInTx(ctx, dbTx, common.AccountTypeIncoming, sendAssetId, rcvUser.ID)
 			if err != nil {
+				// rollback since we are returning early on error
+				dbTx.Rollback()
 				svc.Logger.Errorf("Could not find incoming account user_id:%v", rcvUser.ID)
 				return "error: failed to find debit account for receive", false
 			}
 			// get the receiver's credit account / current account
-			rcvCreditAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, sendAssetId, rcvUser.ID)
+			rcvCreditAccount, err := svc.AccountForInTx(ctx, dbTx, common.AccountTypeCurrent, sendAssetId, rcvUser.ID)
 			if err != nil {
+				// rollback since we are returning early on error
+				dbTx.Rollback()
 				svc.Logger.Errorf("Could not find current account user_id:%v", rcvUser.ID)
 				return "error: failed to find credit account for receive", false
 			}
@@ -229,8 +247,10 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 				BroadcastState: models.TahubInternalComplete,
 			}
 			// insert the tx entry
-			_, err = svc.DB.NewInsert().Model(&entry).Exec(ctx)
+			_, err = dbTx.NewInsert().Model(&entry).Exec(ctx)
 			if err != nil {
+				// rollback since we are returning early on error
+				dbTx.Rollback()
 				svc.Logger.Error("error inserting transaction entry")
 				// TODO apply sentry
 				return "error: failed to create transaction entry for receive", false
@@ -244,8 +264,10 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 				models.TahubInternalComplete,
 			)
 			// insert the updated tx from sender's perspective
-			_, err = svc.DB.NewInsert().Model(updatedTx).Exec(ctx)
+			_, err = dbTx.NewInsert().Model(updatedTx).Exec(ctx)
 			if err != nil {
+				// rollback since we are returning early on error
+				dbTx.Rollback()
 				svc.Logger.Error("error inserting updated transaction entry")
 				// TODO apply sentry
 				return "error: failed to create transaction entry for send", false

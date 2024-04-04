@@ -332,6 +332,27 @@ func (svc *LndhubService) InsertTapdTransactionEntry(ctx context.Context, userId
 	}
 	return entry, err
 }
+/// * NOTE the difference between this function and InsertTapdTransactionEntry is that the transaction has already started in
+///		   this function.
+func (svc *LndhubService) InsertTapdTransactionEntryInTx(ctx context.Context, tx bun.Tx, userId int64, creditAccount models.Account, debitAccount models.Account, amt uint64) (entry models.TransactionEntry, err error) {
+	entry = models.TransactionEntry{
+		UserID:          userId,
+		CreditAccountID: creditAccount.ID,
+		DebitAccountID:  debitAccount.ID,
+		Amount:          int64(amt),
+		BroadcastState:  models.BroadcastStatePending,
+		TaAssetID: 		 creditAccount.TaAssetID,
+		EntryType:       models.EntryTypeOutgoing,
+	}
+
+	// The DB constraints make sure the user actually has enough balance for the transaction
+	// If the user does not have enough balance this call fails
+	_, err = tx.NewInsert().Model(&entry).Exec(ctx)
+	if err != nil {
+		return entry, err
+	}
+	return entry, err
+}
 
 func (svc *LndhubService) UpdateTapdTransactionEntry(ctx context.Context, pendingTxEntryId int64, assetId string, userId int64, broadcastState string) bool {
 	// TODO need more from : https://lightning.engineering/api-docs/api/taproot-assets/taproot-assets/subscribe-send-asset-event-ntfns#taprpcexecutesendstateevent

@@ -273,6 +273,12 @@ func (svc *LndhubService) AccountFor(ctx context.Context, accountType string, as
 	return account, err
 }
 
+func (svc *LndhubService) AccountForInTx(ctx context.Context, tx bun.Tx, accountType string, assetId string, userId int64) (models.Account, error) {
+	account := models.Account{}
+	err := tx.NewSelect().Model(&account).Where("user_id = ? AND account.ta_asset_id = ? AND type= ?", userId, assetId, accountType).Relation("Asset").Limit(1).Scan(ctx)
+	return account, err
+}
+
 func (svc *LndhubService) AccountsFor(ctx context.Context, accountType string, userId int64) ([]models.Account, error) {
 	accounts := []models.Account{}
 	err := svc.DB.NewSelect().Model(&accounts).Where("user_id = ? AND type = ?", userId, accountType).Relation("Asset").Scan(ctx)
