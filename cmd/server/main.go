@@ -30,20 +30,20 @@ import (
 	"github.com/uptrace/bun/migrate"
 )
 
-// @title        LndHub.go
-// @version      0.9.0
+// @title        tahub.go
+// @version      0.0.1
 // @description  Accounting wrapper for the Lightning Network providing separate accounts for end-users.
 
-// @contact.name   Alby
-// @contact.url    https://getalby.com
-// @contact.email  hello@getalby.com
+// @contact.name   Nostrassets
+// @contact.url    
+// @contact.email  
 
 // @license.name  GNU GPLv3
 // @license.url   https://www.gnu.org/licenses/gpl-3.0.en.html
 
 // @BasePath  /v2
 
-// @securitydefinitions.oauth2.password  OAuth2Password
+// @securitydefinitions					 NIP04
 // @tokenUrl                             /v2/auth
 // @schemes                              https http
 func main() {
@@ -159,7 +159,6 @@ func main() {
 	logMw := transport.CreateLoggingMiddleware(logger)
 	// strict rate limit for requests for sending payments
 	strictRateLimitMiddleware := transport.CreateRateLimitMiddleware(c.StrictRateLimit, c.BurstRateLimit)
-
 	secured := e.Group("", tokens.Middleware(c.JWTSecret), logMw)
 	securedWithStrictRateLimit := e.Group("", tokens.Middleware(c.JWTSecret), strictRateLimitMiddleware, logMw)
 	// inital nostr gateway
@@ -170,7 +169,6 @@ func main() {
 	//Swagger API spec
 	docs.SwaggerInfo.Host = c.Host
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
-
 
 	var backgroundWg sync.WaitGroup
 	backGroundCtx, _ := signal.NotifyContext(context.Background(), os.Interrupt)

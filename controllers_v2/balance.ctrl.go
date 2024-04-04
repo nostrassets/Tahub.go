@@ -20,8 +20,15 @@ func NewBalanceController(svc *service.LndhubService) *BalanceController {
 
 type BalanceResponse struct {
 	Balance  int64  `json:"balance"`
-	Currency string `json:"currency"`
-	Unit     string `json:"unit"`
+	AssetId  string `json:"asset_id"`
+	// TODO add these back with taproot-assets multi-asset double-entry ledger
+	// Currency string `json:"currency"`
+	// Unit     string `json:"unit"`
+}
+
+/// get all balances
+type BalancesResponse struct {
+	Balances map[string]int64 `json:"balances"`
 }
 
 // Balance godoc
@@ -34,7 +41,7 @@ type BalanceResponse struct {
 // @Failure      400  {object}  responses.ErrorResponse
 // @Failure      500  {object}  responses.ErrorResponse
 // @Router       /v2/balance/:asset_id [get]
-// @Security     OAuth2Password
+
 func (controller *BalanceController) Balance(c echo.Context) error {
 	userId := c.Get("UserID").(int64)
 	assetParam := c.Param("asset_id")
@@ -55,14 +62,10 @@ func (controller *BalanceController) Balance(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, &BalanceResponse{
 		Balance:  balance,
-		Currency: "BTC",
-		Unit:     "sat",
+		AssetId: assetParam,
 	})
 }
-/// get all balances
-type BalancesResponse struct {
-	Balances map[string]int64 `json:"balances"`
-}
+
 /// Balances godoc
 /// @Summary      Retrieve all balances
 /// @Description  Retrieve all user balances

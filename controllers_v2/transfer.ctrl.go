@@ -37,7 +37,7 @@ type TransferResponseBody struct {
 // @Router       /v2/transfer [post]
 
 func (controller *TransferController) Transfer(c echo.Context) error {
-	userId := c.Get("UserID").(uint64)
+	userId := c.Get("UserID").(int64)
 	// payload is an event
 	var body TransferRequestBody
 	// load request payload, params into nostr.Event struct
@@ -46,14 +46,14 @@ func (controller *TransferController) Transfer(c echo.Context) error {
 		// TODO this is not a nostr error responder
 		return controller.responder.NostrErrorJson(c, responses.BadArgumentsError.Message)
 	}
-	// potentially redundant validation
+
 	if err := c.Validate(&body); err != nil {
 		c.Logger().Errorf("Failed to validate transfer request body: %v", err)
 		// TODO this is not a nostr error responder
 		return controller.responder.NostrErrorJson(c, responses.BadArgumentsError.Message)
 	}
 	// transfer assets
-	msg, status := controller.svc.TransferAssets(c.Request().Context(), userId, body.Address)
+	msg, status := controller.svc.TransferAssets(c.Request().Context(), uint64(userId), body.Address)
 	if !status {
 		c.Logger().Errorf("Failed to send assets: %v", msg)
 		// TODO improve error response

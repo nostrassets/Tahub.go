@@ -42,7 +42,7 @@ type AddressResponseBody struct {
 // @Failure      500      {object}  responses.ErrorResponse
 // @Router       /v2/create-address [post]
 func (controller *AddressController) CreateAddress(c echo.Context) error {
-	userId := c.Get("UserID").(uint64)
+	userId := c.Get("UserID").(int64)
 	// payload is an event
 	var body AddressRequestBody
 	// load request payload, params into nostr.Event struct
@@ -51,7 +51,7 @@ func (controller *AddressController) CreateAddress(c echo.Context) error {
 		// TODO this is not a nostr error responder
 		return controller.responder.NostrErrorJson(c, responses.BadArgumentsError.Message)
 	}
-	// potentially redundant validation
+
 	if err := c.Validate(&body); err != nil {
 		c.Logger().Errorf("Invalid Nostr Event request body: %v", err)
 		// TODO this is not a nostr error responder
@@ -63,7 +63,7 @@ func (controller *AddressController) CreateAddress(c echo.Context) error {
 		c.Logger().Errorf("Invalid amount. Pass value as a string: %v", err)
 		return c.JSON(http.StatusBadRequest, responses.BadArgumentsError)
 	}
-	result, err := controller.svc.FetchOrCreateAssetAddr(c.Request().Context(), userId, body.AssetId, amt)
+	result, err := controller.svc.FetchOrCreateAssetAddr(c.Request().Context(), uint64(userId), body.AssetId, amt)
 	if err != nil {
 		c.Logger().Errorf("error creating address: %v", err)
 		return c.JSON(http.StatusBadRequest, responses.BadArgumentsError)

@@ -14,7 +14,7 @@ func RegisterV2Endpoints(svc *service.LndhubService, e *echo.Echo, secured *echo
 	e.GET("/v2/universe-assets", v2controllers.NewUniverseController(svc).UniverseAssets, strictRateLimitMiddleware, logMw)
 	// since tahub users register by pubkey, v2 auth returns tokens if a message
 	// is signed by the pubkey of our user to the server pubkey
-	e.POST("/v2/auth", v2controllers.NewPubkeyAuthController(svc).Auth, strictRateLimitMiddleware, logMw)
+	e.POST("/v2/auth", v2controllers.NewPubkeyAuthController(svc).PubkeyAuth, strictRateLimitMiddleware, adminMw, logMw)
 	if svc.Config.AllowAccountCreation {
 		/// TAHUB_CREATE_USER / N.S. register modified endpoint
 		e.POST("/v2/users", v2controllers.NewCreateUserController(svc).CreateUser, strictRateLimitMiddleware, adminMw, logMw)
@@ -30,7 +30,7 @@ func RegisterV2Endpoints(svc *service.LndhubService, e *echo.Echo, secured *echo
 	// NOSTR EVENT Request - single endpoint that takes Nostr Events
 	e.POST("/v2/event", nostrEventCtrl.HandleNostrEvent, strictRateLimitMiddleware, logMw)
 	// REST Tahub actions with nostr abstracted
-	secured.GET("/v2/balances/all", v2controllers.NewBalanceController(svc).Balance, strictRateLimitMiddleware, logMw)
+	secured.GET("/v2/balances/all", v2controllers.NewBalanceController(svc).Balances, strictRateLimitMiddleware, logMw)
 	secured.POST("/v2/create-address", v2controllers.NewAddressController(svc).CreateAddress, strictRateLimitMiddleware, logMw)
 	secured.POST("/v2/transfer", v2controllers.NewTransferController(svc).Transfer, strictRateLimitMiddleware, logMw)
 
@@ -41,5 +41,5 @@ func RegisterV2Endpoints(svc *service.LndhubService, e *echo.Echo, secured *echo
 	// securedWithStrictRateLimit.POST("/v2/payments/bolt11", v2controllers.NewPayInvoiceController(svc).PayInvoice)
 	// securedWithStrictRateLimit.POST("/v2/payments/keysend", keysendCtrl.KeySend)
 	// securedWithStrictRateLimit.POST("/v2/payments/keysend/multi", keysendCtrl.MultiKeySend)
-	// secured.GET("/v2/balance/:asset_id", v2controllers.NewBalanceController(svc).Balance)
+	secured.GET("/v2/balance/:asset_id", v2controllers.NewBalanceController(svc).Balance)
 }

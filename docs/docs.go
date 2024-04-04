@@ -10,9 +10,7 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "contact": {
-            "name": "Alby",
-            "url": "https://getalby.com",
-            "email": "hello@getalby.com"
+            "name": "Nostrassets"
         },
         "license": {
             "name": "GNU GPLv3",
@@ -104,7 +102,6 @@ const docTemplate = `{
                         "description": "Refresh Token",
                         "name": "refresh_token",
                         "in": "body",
-                        "required": true,
                         "schema": {
                             "type": "string"
                         }
@@ -1062,23 +1059,16 @@ const docTemplate = `{
                 }
             }
         }
-    },
-    "securityDefinitions": {
-        "OAuth2Password": {
-            "type": "oauth2",
-            "flow": "password",
-            "tokenUrl": "/v2/auth"
-        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "0.9.0",
+	Version:          "0.0.1",
 	Host:             "",
 	BasePath:         "/v2",
-	Schemes:          []string{},
-	Title:            "LndHub.go",
+	Schemes:          []string{"https", "http"},
+	Title:            "tahub.go",
 	Description:      "Accounting wrapper for the Lightning Network providing separate accounts for end-users.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

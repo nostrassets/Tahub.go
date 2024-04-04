@@ -153,13 +153,15 @@ func (controller *NostrController) HandleNostrEvent(c echo.Context) error {
 			c.Logger().Errorf("Failed to parse amt field in content: %v", err)
 			return controller.responder.NostrErrorJson(c, responses.GeneralServerError.Message)
 		}
-		msg, err := controller.svc.FetchOrCreateAssetAddr(c.Request().Context(), uint64(existingUser.ID), assetId, amt)
+		msgContent, err := controller.svc.FetchOrCreateAssetAddr(c.Request().Context(), uint64(existingUser.ID), assetId, amt)
 		if err != nil {
 			// set isError status to true for the error response
 			status = true
 			controller.svc.Logger.Errorf("Failed to fetch or create asset address: %v", err)
 			return controller.responder.NostrErrorJson(c, responses.GeneralServerError.Message)
 		}
+		// create msg
+		msg := "address: " + msgContent
 		/// * NOTE status is passed to an isError flag
 		return controller.responder.GetAddressJson(c, msg)
 	} else if data[0] == "TAHUB_GET_BALANCES" {
