@@ -217,7 +217,7 @@ func (svc *LndhubService) FetchOrCreateAssetAddr(ctx context.Context, userId uin
 			if addr.Amount == amt {
 				// setting flag to prevent creation of any additional receiver resources. address exists for exact amount.
 				amtMatch = true
-				return fmt.Sprintf("address: %s", addr.Addr), nil
+				return addr.Addr, nil
 			}
 		}
 	}
@@ -235,7 +235,7 @@ func (svc *LndhubService) FetchOrCreateAssetAddr(ctx context.Context, userId uin
 	_, err = svc.CreateAddress(ctx, newAddr.Encoded, userId, assetId, amt, createAccounts)
 	// note the defensive return
 	if err == nil {
-		return fmt.Sprintf("address: %s", newAddr.Encoded), nil
+		return newAddr.Encoded, nil
 	} 
 	return "error: failed to create or fetch address.", nil
 }

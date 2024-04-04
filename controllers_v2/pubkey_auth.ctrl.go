@@ -14,7 +14,7 @@ type PubkeyAuthController struct {
 }
 
 func NewPubkeyAuthController(svc *service.LndhubService) *PubkeyAuthController {
-	return &PubkeyAuthController{svc: svc}
+	return &PubkeyAuthController{svc: svc, responder: responses.RelayResponder{}}
 }
 /// auth request 
 type AuthRequestBody struct {
@@ -36,12 +36,12 @@ type AuthResponseBody struct {
 /// @Tags         Auth
 /// @Param        pubkey  body  string  true  "Pubkey"
 /// @Param        content  body  string  true  "Content"
-/// @Param        refresh_token  body  string  true  "Refresh Token"
+/// @Param        refresh_token  body  string  false  "Refresh Token"
 /// @Success      200  {object}  AuthResponseBody
 /// @Failure      400  {object}  responses.ErrorResponse
 /// @Failure      500  {object}  responses.ErrorResponse
 /// @Router       /v2/auth [post]
-func (controller *PubkeyAuthController) Auth(c echo.Context) error {
+func (controller *PubkeyAuthController) PubkeyAuth(c echo.Context) error {
 	// payload is an event
 	var body AuthRequestBody
 	// load request payload, params into nostr.Event struct

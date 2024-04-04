@@ -11,10 +11,11 @@ import (
 // CreateUserController : Create user controller struct
 type CreateUserController struct {
 	svc *service.LndhubService
+	responder responses.RelayResponder
 }
 
 func NewCreateUserController(svc *service.LndhubService) *CreateUserController {
-	return &CreateUserController{svc: svc}
+	return &CreateUserController{svc: svc, responder: responses.RelayResponder{}}
 }
 
 type CreateUserResponseBody struct {
@@ -43,6 +44,11 @@ func (controller *CreateUserController) CreateUser(c echo.Context) error {
 	if err := c.Bind(&body); err != nil {
 		c.Logger().Errorf("Failed to load create user request body: %v", err)
 		return c.JSON(http.StatusBadRequest, responses.BadArgumentsError)
+	}
+	if err := c.Validate(&body); err != nil {
+		c.Logger().Errorf("Invalid Nostr Event request body: %v", err)
+		// TODO this is not a nostr error responder
+		return controller.responder.NostrErrorJson(c, responses.BadArgumentsError.Message)
 	}
 	user, err := controller.svc.CreateUser(c.Request().Context(), body.Pubkey)
 	if err != nil {

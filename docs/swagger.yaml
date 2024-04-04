@@ -250,16 +250,14 @@ definitions:
     type: object
 info:
   contact:
-    email: hello@getalby.com
-    name: Alby
-    url: https://getalby.com
+    name: Nostrassets
   description: Accounting wrapper for the Lightning Network providing separate accounts
     for end-users.
   license:
     name: GNU GPLv3
     url: https://www.gnu.org/licenses/gpl-3.0.en.html
-  title: LndHub.go
-  version: 0.9.0
+  title: tahub.go
+  version: 0.0.1
 paths:
   /v2/admin/users:
     put:
@@ -312,7 +310,6 @@ paths:
       - description: Refresh Token
         in: body
         name: refresh_token
-        required: true
         schema:
           type: string
       produces:
@@ -682,9 +679,7 @@ paths:
       summary: Create an account
       tags:
       - Account
-securityDefinitions:
-  OAuth2Password:
-    flow: password
-    tokenUrl: /v2/auth
-    type: oauth2
+schemes:
+- https
+- http
 swagger: "2.0"

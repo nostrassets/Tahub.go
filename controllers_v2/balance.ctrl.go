@@ -24,6 +24,10 @@ type BalanceResponse struct {
 	Unit     string `json:"unit"`
 }
 
+/// get all balances
+type BalancesResponse struct {
+	Balances map[string]int64 `json:"balances"`
+}
 // Balance godoc
 // @Summary      Retrieve balance
 // @Description  Current user's balance in satoshi
@@ -59,10 +63,7 @@ func (controller *BalanceController) Balance(c echo.Context) error {
 		Unit:     "sat",
 	})
 }
-/// get all balances
-type BalancesResponse struct {
-	Balances map[string]int64 `json:"balances"`
-}
+
 /// Balances godoc
 /// @Summary      Retrieve all balances
 /// @Description  Retrieve all user balances

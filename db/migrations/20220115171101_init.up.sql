@@ -26,7 +26,8 @@ CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     pubkey character varying NOT NULL UNIQUE,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone
+    updated_at timestamp with time zone,
+    CONSTRAINT lencheck CHECK (char_length(pubkey) > 28)
 );
 --bun:split
 CREATE TABLE events (

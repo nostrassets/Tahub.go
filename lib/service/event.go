@@ -119,11 +119,13 @@ func (svc *LndhubService) EventHandler(ctx context.Context, payload nostr.Event,
 			return svc.RespondToNip4(ctx, "error: failed to parse amt", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		}
 		// find or create address for user, by asset_id and amount
-		msg, err := svc.FetchOrCreateAssetAddr(ctx, uint64(existingUser.ID), assetId, amt)
+		msgContent, err := svc.FetchOrCreateAssetAddr(ctx, uint64(existingUser.ID), assetId, amt)
 		if err != nil {
 			svc.Logger.Errorf("Failed to get rcv address for asset from tapd: %s", err)
 			return svc.RespondToNip4(ctx, "error: failed to get/create rcv address", true, decoded.PubKey, decoded.ID, relayUri, lastSeen)
 		}
+		// create msg
+		msg := fmt.Sprintf("address: %s", msgContent)
 		// respond to client
 		return svc.RespondToNip4(ctx, msg, false, decoded.PubKey, decoded.ID, relayUri, decoded.CreatedAt.Time().Unix())
 	} else if data[0] == "TAHUB_GET_BALANCES" {

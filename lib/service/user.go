@@ -19,6 +19,8 @@ import (
 func (svc *LndhubService) CreateUser(ctx context.Context, pubkey string) (user *models.User, err error) {
 	user = &models.User{}
 	user.Pubkey = pubkey
+	// TODO enforce a min length on the pubkey
+	
 	// Create user and the user's accounts
 	// We use double-entry bookkeeping so we use 4 accounts: incoming, current, outgoing and fees
 	// Wrapping this in a transaction in case something fails
