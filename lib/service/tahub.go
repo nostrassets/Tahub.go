@@ -164,6 +164,7 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 		// TODO OK Relay-Compatible messages need a central location
 		return "error: insufficient funds.", false
 	} else {
+		
 		// insert pending transaction entry
 		debitAccount, err := svc.AccountFor(ctx, common.AccountTypeCurrent, sendAssetId, int64(userId))
 		if err != nil {
@@ -182,9 +183,13 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 		}
 		// determine if this is an internal transfer for tahub
 		// if so, we need to handle it differently
-		rcvAddr, err := svc.FindAddress(ctx, userId, sendAssetId, sendAmt)
-		if err != nil || rcvAddr.Addr == "" {
-			// this is an external transfer
+		rcvAddr, err := svc.FindAddressByAddr(ctx, addr)
+		if err != nil {
+			// TODO OK Relay-Compatible messages need a central location
+			return "error: failed to check on existing address.", false
+		}
+		if err == nil && rcvAddr == nil {
+			/// * NOTE this is an external transfer
 			// send asset so tx is already in db for status updates
 			sendReq := taprpc.SendAssetRequest{
 				TapAddrs: []string{addr},
@@ -198,7 +203,7 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 			msg := fmt.Sprintf("success: sent %s", sendAssetId)
 			return msg, true
 		} else {
-			// this is an internal transfer
+			/// * NOTE this is an internal transfer
 			rcvUser := rcvAddr.User
 			// get the receiver's debit account / incoming account
 			rcvDebitAccount, err := svc.AccountFor(ctx, common.AccountTypeIncoming, sendAssetId, rcvUser.ID)
