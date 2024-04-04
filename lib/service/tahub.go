@@ -256,21 +256,29 @@ func (svc *LndhubService) TransferAssets(ctx context.Context, userId uint64, add
 				return "error: failed to create transaction entry for receive", false
 			}
 			// update the original tx to have a complete status from the sender's perspective
-			updatedTx := svc.UpdateTapdTransactionEntry(
+			updateStatus := svc.UpdateTapdTransactionEntry(
 				ctx,
 				tx.ID,
 				sendAssetId,
 				int64(userId),
 				models.TahubInternalComplete,
 			)
-			// insert the updated tx from sender's perspective
-			_, err = dbTx.NewInsert().Model(updatedTx).Exec(ctx)
+			// check the status of the update
+			if !updateStatus {
+				// rollback since we are returning early on error
+				dbTx.Rollback()
+				svc.Logger.Error("error updating transaction entry")
+				// TODO apply sentry
+				return "error: failed to update transaction entry for send", false
+			}
+			// commit the transaction
+			err = dbTx.Commit()
 			if err != nil {
 				// rollback since we are returning early on error
 				dbTx.Rollback()
-				svc.Logger.Error("error inserting updated transaction entry")
+				svc.Logger.Error("error committing transaction")
 				// TODO apply sentry
-				return "error: failed to create transaction entry for send", false
+				return "error: failed to commit transaction", false
 			}
 			return "success: internal transfer complete", true
 		} 		

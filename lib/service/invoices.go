@@ -366,6 +366,17 @@ func (svc *LndhubService) UpdateTapdTransactionEntry(ctx context.Context, pendin
 		
 	return err == nil
 }
+
+func (svc *LndhubService) UpdateTapdTransactionEntryInTx(ctx context.Context, tx bun.Tx, pendingTxEntryId int64, assetId string, userId int64, broadcastState string) bool {
+	_, err := tx.NewUpdate().
+		Model(&models.TransactionEntry{ID: pendingTxEntryId, TaAssetID: assetId, UserID: userId, BroadcastState: broadcastState}).
+		OmitZero().
+		WherePK().
+		Exec(ctx)
+		
+	return err == nil
+}
+
 func (svc *LndhubService) InsertTransactionEntry(ctx context.Context, invoice *models.Invoice, creditAccount, debitAccount, feeAccount models.Account) (entry models.TransactionEntry, err error) {
 	entry = models.TransactionEntry{
 		UserID:          invoice.UserID,
